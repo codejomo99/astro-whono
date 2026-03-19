@@ -2,9 +2,8 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import TagFilterHeader from './TagFilterHeader.astro';
 import EssayCard from './EssayCard.astro';
-import { createWithBase, getEssaySlug, type EssayEntry } from '../lib/content';
+import { createWithBase, getEssayDerivedText, getEssaySlug, type EssayEntry } from '../lib/content';
 import { getThemeSettings, getVisibleArticleMetaTags } from '../lib/theme-settings';
-import { getListExcerpt } from '../utils/excerpt';
 import { joinPageSubtitleText } from '../utils/format';
 
 const {
@@ -73,7 +72,7 @@ const fallbackListId = 'essay-tag-list';
         href={withBase(`/archive/${getEssaySlug(entry)}/`)}
         slug={getEssaySlug(entry)}
         title={entry.data.title}
-        excerpt={getListExcerpt(entry)}
+        excerpt={getEssayDerivedText(entry).excerpt}
         date={entry.data.date}
         visibleTags={getVisibleArticleMetaTags(entry.data.tags, 'list')}
         articleMetaSettings={articleMeta}

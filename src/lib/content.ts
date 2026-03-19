@@ -8,6 +8,7 @@ import {
   RESERVED_ESSAY_SLUGS,
   flattenEntryIdToSlug
 } from '../utils/slug-rules';
+import { deriveMarkdownText, truncateText } from '../utils/excerpt';
 export { createWithBase } from '../utils/format';
 
 type OrderBy<K extends CollectionKey> = (a: CollectionEntry<K>, b: CollectionEntry<K>) => number;
@@ -63,6 +64,11 @@ export type EssayRouteEntry = {
   entry: EssayEntry;
   prev: EssayEntry | null;
   next: EssayEntry | null;
+};
+export type EssayDerivedText = {
+  plainText: string;
+  text: string;
+  excerpt: string;
 };
 
 export const getEssaySlug = (entry: EssayEntry) =>
@@ -129,10 +135,12 @@ const assertUniqueEssaySlugs = (entries: readonly EssayEntry[]) => {
 
 const orderByEssayDate = (a: EssayEntry, b: EssayEntry) => b.data.date.valueOf() - a.data.date.valueOf();
 const shouldMemoizeEssayQueries = import.meta.env.PROD;
+const MAX_ESSAY_INDEX_TEXT = 600;
 
 let sortedEssaysPromise: Promise<EssayEntry[]> | null = null;
 let visibleEssaysPromise: Promise<EssayEntry[]> | null = null;
 let archiveEssaysPromise: Promise<EssayEntry[]> | null = null;
+const essayDerivedTextById = new Map<string, EssayDerivedText>();
 
 const cloneEssayEntries = (entries: readonly EssayEntry[]) => entries.slice();
 
@@ -147,6 +155,30 @@ const loadSortedEssays = async ({ includeDraft }: EssayQueryOptions = {}) => {
   assertUniqueEssaySlugs(essays);
   return essays;
 };
+
+const buildEssayDerivedText = (entry: EssayEntry): EssayDerivedText => {
+  const { plainText, excerptText } = deriveMarkdownText(entry.body ?? '');
+
+  return {
+    plainText,
+    text: plainText.length > MAX_ESSAY_INDEX_TEXT ? plainText.slice(0, MAX_ESSAY_INDEX_TEXT) : plainText,
+    excerpt: truncateText(excerptText, 120)
+  };
+};
+
+export function getEssayDerivedText(entry: EssayEntry): EssayDerivedText {
+  if (!shouldMemoizeEssayQueries) {
+    return buildEssayDerivedText(entry);
+  }
+
+  let derivedText = essayDerivedTextById.get(entry.id);
+  if (!derivedText) {
+    derivedText = buildEssayDerivedText(entry);
+    essayDerivedTextById.set(entry.id, derivedText);
+  }
+
+  return derivedText;
+}
 
 export async function getSortedEssays(options: EssayQueryOptions = {}) {
   if (!shouldUseDefaultEssayCache(options.includeDraft)) {

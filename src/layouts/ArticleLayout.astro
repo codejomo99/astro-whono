@@ -3,9 +3,10 @@ import BaseLayout from './BaseLayout.astro';
 import Icon from '../components/Icon.astro';
 import Lightbox from '../components/Lightbox.astro';
 import '../styles/article.css';
-import { formatISODate } from '../utils/format';
-import { getArticleReadingStats, getMetaDescription } from '../utils/excerpt';
+import { getEssayDerivedText } from '../lib/content';
 import type { ArticleMetaSettings } from '../lib/theme-settings';
+import { formatISODate } from '../utils/format';
+import { truncateText } from '../utils/excerpt';
 
 const {
   entry,
@@ -27,9 +28,17 @@ const entryTags: string[] = entry?.data?.tags ?? [];
 const defaultImage = '/og.svg';
 const coverImage = entry?.data?.cover ?? null;
 const ogImage = coverImage ?? defaultImage;
-const description = getMetaDescription(entry);
+const derivedText = getEssayDerivedText(entry);
+const rawDescription = entry?.data?.description?.trim?.() ?? '';
+const description = rawDescription || truncateText(derivedText.excerpt, 90);
 const articleReadingStats = articleMetaSettings.showWordCount || articleMetaSettings.showReadingTime
-  ? getArticleReadingStats(entry?.body ?? '')
+  ? (() => {
+      const wordCount = derivedText.plainText.replace(/\s+/g, '').length;
+      return {
+        wordCount,
+        readingMinutes: Math.max(1, Math.ceil(wordCount / 320))
+      };
+    })()
   : { wordCount: 0, readingMinutes: 0 };
 const numberFormatter = new Intl.NumberFormat('zh-CN');
 const shouldShowMetaLine = articleMetaSettings.showDate

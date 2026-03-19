@@ -5,11 +5,6 @@ export type DerivedMarkdownText = {
   excerptText: string;
 };
 
-export type ArticleReadingStats = {
-  wordCount: number;
-  readingMinutes: number;
-};
-
 export function splitMore(md: string): string {
   if (!md) return '';
   const match = md.match(MORE_REGEX);
@@ -60,33 +55,4 @@ export function deriveMarkdownText(md: string): DerivedMarkdownText {
     plainText,
     excerptText: excerptMarkdown === md ? plainText : cleanMarkdownToText(excerptMarkdown)
   };
-}
-
-export function getArticleReadingStats(md: string): ArticleReadingStats {
-  const { plainText } = deriveMarkdownText(md);
-  const wordCount = plainText.replace(/\s+/g, '').length;
-  return {
-    wordCount,
-    readingMinutes: Math.max(1, Math.ceil(wordCount / 320))
-  };
-}
-
-export function excerptFromMarkdown(md: string, maxChars = 120): string {
-  const { excerptText } = deriveMarkdownText(md);
-  return truncateText(excerptText, maxChars);
-}
-
-export function getListExcerpt(entry: { body?: string }): string {
-  return excerptFromMarkdown(entry?.body ?? '', 120);
-}
-
-export function getBitsExcerpt(entry: { body?: string }): string {
-  return excerptFromMarkdown(entry?.body ?? '', 180);
-}
-
-export function getMetaDescription(entry: { body?: string; data?: { description?: string } }): string {
-  const raw = entry?.data?.description ?? '';
-  const trimmed = typeof raw === 'string' ? raw.trim() : '';
-  if (trimmed) return trimmed;
-  return excerptFromMarkdown(entry?.body ?? '', 90);
 }

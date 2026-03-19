@@ -1,16 +1,12 @@
 import type { APIRoute } from 'astro';
-import { getArchiveEssays, getEssaySlug } from '../../lib/content';
-import { cleanMarkdownToText } from '../../utils/excerpt';
+import { getArchiveEssays, getEssayDerivedText, getEssaySlug } from '../../lib/content';
 
 export const prerender = true;
-
-const MAX_INDEX_TEXT = 600;
 
 export const GET: APIRoute = async () => {
   const archiveItems = await getArchiveEssays();
   const index = archiveItems.map((entry) => {
-    const plain = cleanMarkdownToText(entry.body ?? '');
-    const text = plain.length > MAX_INDEX_TEXT ? plain.slice(0, MAX_INDEX_TEXT) : plain;
+    const { text } = getEssayDerivedText(entry);
     return {
       slug: getEssaySlug(entry),
       title: entry.data.title ?? '',

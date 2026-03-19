@@ -27,6 +27,7 @@ The format is based on Keep a Changelog, and this project aims to follow Semanti
 
 ### Maintenance
 - 调整 Theme Console 客户端脚本结构，便于后续维护与迭代。
+- 优化 essay 列表、搜索索引与详情页的文本派生复用，减少重复计算并统一摘要 / 元信息回退来源。
 
 
 ## [0.2.0] - 2026-03-13
