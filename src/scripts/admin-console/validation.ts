@@ -15,6 +15,8 @@ import {
   ADMIN_HOME_INTRO_MAX_LENGTH,
   ADMIN_LOCALE_RE,
   ADMIN_NAV_IDS,
+  ADMIN_NAV_ORDER_MAX,
+  ADMIN_NAV_ORDER_MIN,
   ADMIN_NAV_ORNAMENT_MAX_LENGTH,
   ADMIN_PAGE_SUBTITLE_MAX_LENGTH,
   ADMIN_PAGE_TITLE_MAX_LENGTH,
@@ -23,6 +25,7 @@ import {
   ADMIN_SOCIAL_ORDER_MIN,
   ADMIN_SOCIAL_PRESET_IDS,
   ADMIN_X_HOSTS,
+  getAdminNavOrderIssues,
   getAdminSocialOrderIssues,
   isAdminAllowedHttpsUrl,
   isAdminHomeIntroLinkKey,
@@ -478,7 +481,22 @@ export const createValidation = ({
     }
 
     const seenIds = new Set<SidebarNavId>();
-    const seenOrders = new Set<number>();
+    const navOrderIssues = new Map<SidebarNavId, 'range' | 'duplicate'>();
+    getAdminNavOrderIssues(
+      nav.flatMap((item) =>
+        ADMIN_NAV_IDS.includes(item.id)
+          ? [
+              {
+                key: item.id as SidebarNavId,
+                order: item.order
+              }
+            ]
+          : []
+      )
+    ).forEach((issue) => {
+      navOrderIssues.set(issue.key, issue.type);
+    });
+
     nav.forEach((item) => {
       const navId = ADMIN_NAV_IDS.includes(item.id) ? item.id : null;
       if (!navId) {
@@ -512,19 +530,21 @@ export const createValidation = ({
           );
         }
       }
-      if (!Number.isInteger(item.order) || item.order < 1 || item.order > 999) {
+      if (
+        !Number.isInteger(item.order) ||
+        item.order < ADMIN_NAV_ORDER_MIN ||
+        item.order > ADMIN_NAV_ORDER_MAX
+      ) {
         pushIssue(
-          `导航项 ${item.id} 的位置排序必须为 1-999 的整数`,
+          `导航项 ${item.id} 的位置排序必须为 ${ADMIN_NAV_ORDER_MIN}-${ADMIN_NAV_ORDER_MAX} 的整数`,
           navId ? getNavFieldTarget(navId, 'order') : getFirstNavLabelTarget
         );
-      }
-      if (seenOrders.has(item.order)) {
+      } else if (navId && navOrderIssues.get(navId) === 'duplicate') {
         pushIssue(
           `位置排序不能重复：${item.order}`,
           navId ? getNavFieldTarget(navId, 'order') : getFirstNavLabelTarget
         );
       }
-      seenOrders.add(item.order);
       if (typeof item.visible !== 'boolean') {
         pushIssue(
           `导航项 ${item.id} 的 visible 必须是布尔值`,

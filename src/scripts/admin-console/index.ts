@@ -391,6 +391,7 @@ if (!root) {
     let currentRevision: string | null = null;
     let isDirty = false;
     let isSaving = false;
+    let isValidating = false;
     let isConsoleLocked = false;
     let isAdminActionsNearViewport = false;
     const statusTargets = [statusEl, statusInlineEl];
@@ -525,18 +526,14 @@ if (!root) {
     };
 
     const syncInteractiveAvailability = (): void => {
+      const isInteractionLocked = isConsoleLocked || isSaving || isValidating;
       queryAll<AdminControl>(root, 'input, textarea, select, button').forEach((element) => {
         if (element === errorRetryBtn) {
-          element.disabled = false;
+          element.disabled = isSaving || isValidating;
           return;
         }
 
-        if (element === saveBtn) {
-          element.disabled = isConsoleLocked || isSaving;
-          return;
-        }
-
-        element.disabled = isConsoleLocked;
+        element.disabled = isInteractionLocked;
       });
     };
 
@@ -549,6 +546,12 @@ if (!root) {
     const setSaving = (next: boolean): void => {
       isSaving = next;
       saveBtn.textContent = next ? '保存中...' : '保存';
+      syncInteractiveAvailability();
+    };
+
+    const setValidating = (next: boolean): void => {
+      isValidating = next;
+      validateBtn.textContent = next ? '校验中...' : '检查配置';
       syncInteractiveAvailability();
     };
 
@@ -758,6 +761,47 @@ if (!root) {
         }
         console.warn(error);
       }
+    };
+
+    const buildSettingsRequestUrl = (options: { dryRun?: boolean } = {}): string => {
+      const requestUrl = new URL(endpoint, window.location.href);
+      if (options.dryRun) {
+        requestUrl.searchParams.set('dryRun', '1');
+      } else {
+        requestUrl.searchParams.delete('dryRun');
+      }
+      return requestUrl.toString();
+    };
+
+    const createSettingsRequestBody = (settings: EditableSettings): string | null => {
+      if (!currentRevision) return null;
+      return JSON.stringify({
+        revision: currentRevision,
+        settings
+      });
+    };
+
+    const requestSettingsWrite = async (
+      settings: EditableSettings,
+      options: { dryRun?: boolean } = {}
+    ): Promise<{ response: Response; payload: unknown }> => {
+      const requestBody = createSettingsRequestBody(settings);
+      if (!requestBody) {
+        throw new Error('missing-revision');
+      }
+
+      const response = await fetch(buildSettingsRequestUrl(options), {
+        method: 'POST',
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json; charset=utf-8'
+        },
+        cache: 'no-store',
+        body: requestBody
+      });
+
+      const payload = (await response.json().catch(() => null)) as unknown;
+      return { response, payload };
     };
 
     errorRetryBtn.addEventListener('click', () => {
@@ -981,14 +1025,72 @@ if (!root) {
       }
     });
 
-    validateBtn.addEventListener('click', () => {
-      const { issues } = validateCurrentSettings();
+    validateBtn.addEventListener('click', async () => {
+      if (isSaving || isValidating) return;
+
+      const { draft, issues } = validateCurrentSettings();
       if (issues.length) {
         setStatus('error', '校验未通过', { announce: false });
         revealErrorState(issues);
         return;
       }
-      setStatus('ok', '校验通过，可直接保存');
+
+      const current = canonicalize(draft);
+      setValidating(true);
+      setStatus('loading', '正在进行服务端预检');
+
+      try {
+        if (!currentRevision) {
+          clearInvalidFields();
+          setErrors(['当前配置缺少 revision，请先同步最新配置后再检查'], {
+            title: '检查前需要重新同步配置'
+          });
+          setStatus('error', '检查配置失败', { announce: false });
+          revealErrorState();
+          return;
+        }
+
+        const { response, payload } = await requestSettingsWrite(current, { dryRun: true });
+        if (applyInvalidSettingsState(payload, { announceStatus: false, revealError: true })) {
+          return;
+        }
+
+        if (!response.ok || !isRecord(payload) || payload.ok !== true) {
+          clearInvalidFields();
+          const serverErrors = getPayloadErrors(payload);
+
+          if (response.status === 409) {
+            setErrors(
+              serverErrors.length
+                ? serverErrors
+                : ['检测到配置已在外部更新；当前草稿仍保留在页面中，请先同步后再决定是否手工合并'],
+              { title: '检查时发现外部更新' }
+            );
+            setStatus('warn', '检查时发现外部更新', { announce: false });
+            revealErrorState();
+            return;
+          }
+
+          setErrors(serverErrors.length ? serverErrors : ['检查配置失败，请稍后重试'], {
+            title: '检查配置失败'
+          });
+          setStatus('error', '检查配置失败', { announce: false });
+          revealErrorState();
+          return;
+        }
+
+        clearInvalidFields();
+        clearErrorBanner();
+        setStatus('ok', '服务端预检通过，可直接保存');
+      } catch (error) {
+        console.error(error);
+        clearInvalidFields();
+        setErrors(['检查配置请求失败，请检查本地服务日志'], { title: '检查配置失败' });
+        setStatus('error', '检查配置失败', { announce: false });
+        revealErrorState();
+      } finally {
+        setValidating(false);
+      }
     });
 
     resetBtn.addEventListener('click', () => {
@@ -1002,7 +1104,7 @@ if (!root) {
     });
 
     saveBtn.addEventListener('click', async () => {
-      if (isSaving) return;
+      if (isSaving || isValidating) return;
       const { draft, issues } = validateCurrentSettings();
       if (issues.length) {
         setStatus('error', '保存前校验失败', { announce: false });
@@ -1024,29 +1126,7 @@ if (!root) {
           return;
         }
 
-        const requestBody = JSON.stringify({
-          revision: currentRevision,
-          settings: current
-        });
-        if (!requestBody) {
-          clearInvalidFields();
-          setErrors(['保存请求体为空，请刷新页面后重试'], { title: '保存请求无效' });
-          setStatus('error', '保存失败', { announce: false });
-          revealErrorState();
-          return;
-        }
-
-        const response = await fetch(endpoint, {
-          method: 'POST',
-          headers: {
-            Accept: 'application/json',
-            'Content-Type': 'application/json; charset=utf-8'
-          },
-          cache: 'no-store',
-          body: requestBody
-        });
-
-        const payload = (await response.json().catch(() => null)) as unknown;
+        const { response, payload } = await requestSettingsWrite(current);
         if (!response.ok || !isRecord(payload) || payload.ok !== true) {
           clearInvalidFields();
           if (applyInvalidSettingsState(payload, { announceStatus: false, revealError: true })) {

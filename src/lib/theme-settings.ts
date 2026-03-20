@@ -11,12 +11,22 @@ import {
   ADMIN_HOME_INTRO_LINK_KEY_SET,
   ADMIN_HOME_INTRO_LINK_LIMIT,
   ADMIN_LOCALE_RE,
+  ADMIN_NAV_IDS,
+  ADMIN_NAV_ORDER_MAX,
+  ADMIN_NAV_ORDER_MIN,
   ADMIN_NAV_ORNAMENT_DEFAULT,
   ADMIN_NAV_ORNAMENT_MAX_LENGTH,
   ADMIN_HERO_PRESET_SET,
+  ADMIN_SOCIAL_ORDER_MAX,
+  ADMIN_SOCIAL_ORDER_MIN,
+  ADMIN_SOCIAL_PRESET_IDS,
   getAdminBitsAvatarLocalFilePath,
+  getAdminNavOrderIssues,
+  getAdminSocialOrderIssues,
   ADMIN_SIDEBAR_DIVIDER_DEFAULT,
   getAdminHeroImageLocalFilePath,
+  isAdminNavOrderValue,
+  isAdminSocialOrderValue,
   isAdminSidebarDividerVariant,
   normalizeAdminBitsAvatarPath,
   normalizeAdminSocialIconKey,
@@ -264,6 +274,8 @@ export interface ThemeSettingsEditablePayload {
   sources: ThemeSettingsSources;
 }
 
+type EditableThemeSettingsSnapshot = EditableThemeSettings;
+
 export type ThemeSettingsFileGroup = 'site' | 'shell' | 'home' | 'page' | 'ui';
 
 export interface ThemeSettingsReadDiagnostic {
@@ -336,6 +348,7 @@ const LEGACY_NAV: SidebarNavItem[] = [
   { id: 'archive', label: '归档', ornament: ADMIN_NAV_ORNAMENT_DEFAULT, visible: true, order: 4 },
   { id: 'about', label: '关于', ornament: ADMIN_NAV_ORNAMENT_DEFAULT, visible: true, order: 5 }
 ];
+const LEGACY_NAV_ORDER = new Map<SidebarNavId, number>(LEGACY_NAV.map((item) => [item.id, item.order]));
 
 const cloneNavItems = (items: readonly SidebarNavItem[]): SidebarNavItem[] =>
   items.map((item) => ({ ...item }));
@@ -529,8 +542,7 @@ const asFooterStartYear = (value: unknown): number | undefined => {
 
 const asPresetSocialOrderValue = (value: unknown): number | undefined => {
   const next = asInteger(value);
-  if (next === undefined) return undefined;
-  return next >= 1 && next <= 999 ? next : undefined;
+  return next !== undefined && isAdminSocialOrderValue(next) ? next : undefined;
 };
 
 const asNullableString = (value: unknown): string | null | undefined => {
@@ -577,9 +589,6 @@ const asEmailAddress = (value: unknown): string | null | undefined => {
 
 const asBoolean = (value: unknown): boolean | undefined =>
   typeof value === 'boolean' ? value : undefined;
-
-const asFiniteNumber = (value: unknown): number | undefined =>
-  typeof value === 'number' && Number.isFinite(value) ? value : undefined;
 
 const asNavId = (value: unknown): SidebarNavId | undefined => {
   if (typeof value !== 'string') return undefined;
@@ -738,29 +747,121 @@ export const getThemeSettingsReadDiagnostics = (): ThemeSettingsReadDiagnostic[]
   return cloneThemeSettingsReadDiagnostics(diagnostics);
 };
 
-export const getThemeSettingsRevision = (): string => {
-  const hash = createHash('sha1');
-  for (const name of SETTINGS_FILE_GROUPS) {
-    const filePath = join(SETTINGS_DIR, `${name}.json`);
-    hash.update(name);
-    hash.update('\0');
+export const getThemeSettingsRevision = (resolved: ThemeSettingsResolved = getThemeSettings()): string =>
+  hashEditableThemeSettingsSnapshot(buildEditableThemeSettingsSnapshot(resolved));
 
-    if (!existsSync(filePath)) {
-      hash.update('__missing__');
-      hash.update('\0');
-      continue;
-    }
-
-    try {
-      hash.update(readFileSync(filePath));
-    } catch (error) {
-      hash.update(`__read_error__:${error instanceof Error ? error.message : String(error)}`);
-    }
-
-    hash.update('\0');
+const claimAvailableOrder = (
+  usedOrders: Set<number>,
+  preferredOrder: number,
+  fallbackOrder: number,
+  isValidOrder: (value: number) => boolean,
+  minOrder: number,
+  maxOrder: number
+): number => {
+  if (isValidOrder(preferredOrder) && !usedOrders.has(preferredOrder)) {
+    usedOrders.add(preferredOrder);
+    return preferredOrder;
   }
 
-  return hash.digest('hex');
+  if (isValidOrder(fallbackOrder) && !usedOrders.has(fallbackOrder)) {
+    usedOrders.add(fallbackOrder);
+    return fallbackOrder;
+  }
+
+  for (let order = minOrder; order <= maxOrder; order += 1) {
+    if (usedOrders.has(order)) continue;
+    usedOrders.add(order);
+    return order;
+  }
+
+  usedOrders.add(fallbackOrder);
+  return fallbackOrder;
+};
+
+const sortSidebarNavItems = (items: readonly SidebarNavItem[]): SidebarNavItem[] =>
+  [...items].sort((a, b) => {
+    if (a.order !== b.order) return a.order - b.order;
+    return ADMIN_NAV_IDS.indexOf(a.id) - ADMIN_NAV_IDS.indexOf(b.id);
+  });
+
+const normalizeSidebarNavItems = (items: readonly SidebarNavItem[]): SidebarNavItem[] => {
+  const normalized = cloneNavItems(items);
+  const hasOrderIssues = getAdminNavOrderIssues(
+    normalized.map((item) => ({
+      key: item.id,
+      order: item.order
+    }))
+  ).length > 0;
+
+  if (!hasOrderIssues) {
+    return sortSidebarNavItems(normalized);
+  }
+
+  const usedOrders = new Set<number>();
+  const nextItems = normalized.map((item) => ({
+    ...item,
+    order: claimAvailableOrder(
+      usedOrders,
+      item.order,
+      LEGACY_NAV_ORDER.get(item.id) ?? ADMIN_NAV_IDS.indexOf(item.id) + 1,
+      isAdminNavOrderValue,
+      ADMIN_NAV_ORDER_MIN,
+      ADMIN_NAV_ORDER_MAX
+    )
+  }));
+
+  return sortSidebarNavItems(nextItems);
+};
+
+const normalizeSocialOrderState = (
+  presetOrder: Readonly<SiteSocialPresetOrder>,
+  customItems: readonly SiteSocialCustomItem[]
+): { presetOrder: SiteSocialPresetOrder; customItems: SiteSocialCustomItem[] } => {
+  const nextPresetOrder = clonePresetSocialOrder(presetOrder);
+  const nextCustomItems = cloneSocialCustomItems(customItems);
+  const hasOrderIssues = getAdminSocialOrderIssues(
+    nextPresetOrder,
+    nextCustomItems.map((item, index) => ({
+      key: String(index),
+      order: item.order
+    }))
+  ).length > 0;
+
+  if (!hasOrderIssues) {
+    return {
+      presetOrder: nextPresetOrder,
+      customItems: nextCustomItems
+    };
+  }
+
+  const usedOrders = new Set<number>();
+
+  ADMIN_SOCIAL_PRESET_IDS.forEach((id) => {
+    nextPresetOrder[id] = claimAvailableOrder(
+      usedOrders,
+      nextPresetOrder[id],
+      DEFAULT_PRESET_SOCIAL_ORDER[id],
+      isAdminSocialOrderValue,
+      ADMIN_SOCIAL_ORDER_MIN,
+      ADMIN_SOCIAL_ORDER_MAX
+    );
+  });
+
+  nextCustomItems.forEach((item, index) => {
+    item.order = claimAvailableOrder(
+      usedOrders,
+      item.order,
+      PRESET_SOCIAL_ITEMS.length + index + 1,
+      isAdminSocialOrderValue,
+      ADMIN_SOCIAL_ORDER_MIN,
+      ADMIN_SOCIAL_ORDER_MAX
+    );
+  });
+
+  return {
+    presetOrder: nextPresetOrder,
+    customItems: nextCustomItems
+  };
 };
 
 const parseSidebarNav = (value: unknown): SidebarNavItem[] | undefined => {
@@ -781,7 +882,8 @@ const parseSidebarNav = (value: unknown): SidebarNavItem[] | undefined => {
     const label = asNonEmptyString(row.label) ?? current.label;
     const ornament = asNullableSingleLineString(row.ornament, ADMIN_NAV_ORNAMENT_MAX_LENGTH);
     const visible = asBoolean(row.visible) ?? current.visible;
-    const order = asFiniteNumber(row.order) ?? current.order;
+    const rawOrder = asInteger(row.order);
+    const order = rawOrder !== undefined && isAdminNavOrderValue(rawOrder) ? rawOrder : current.order;
 
     merged.set(id, {
       id,
@@ -818,6 +920,7 @@ const parseSocialCustomItems = (value: unknown): SiteSocialCustomItem[] | undefi
       suffix += 1;
     }
     seenIds.add(id);
+    const rawOrder = asInteger(row.order);
 
     normalized.push({
       id,
@@ -825,7 +928,7 @@ const parseSocialCustomItems = (value: unknown): SiteSocialCustomItem[] | undefi
       href,
       iconKey: asSocialIconKey(row.iconKey) ?? 'website',
       visible: asBoolean(row.visible) ?? true,
-      order: asInteger(row.order) ?? index + 1
+      order: rawOrder !== undefined && isAdminSocialOrderValue(rawOrder) ? rawOrder : index + 1
     });
 
     if (normalized.length >= SOCIAL_CUSTOM_LIMIT) break;
@@ -1140,12 +1243,17 @@ export const getThemeSettings = (): ThemeSettingsResolved => {
     DEFAULT_UI.layout.sidebarDivider
   );
 
-  const customSocialItems = cloneSocialCustomItems(socialLinksCustom.value);
-  const presetSocialOrder = clonePresetSocialOrder({
-    github: socialLinksGithubOrder.value,
-    x: socialLinksXOrder.value,
-    email: socialLinksEmailOrder.value
-  });
+  const normalizedNav = normalizeSidebarNavItems(nav.value);
+  const normalizedSocialOrderState = normalizeSocialOrderState(
+    {
+      github: socialLinksGithubOrder.value,
+      x: socialLinksXOrder.value,
+      email: socialLinksEmailOrder.value
+    },
+    socialLinksCustom.value
+  );
+  const customSocialItems = cloneSocialCustomItems(normalizedSocialOrderState.customItems);
+  const presetSocialOrder = clonePresetSocialOrder(normalizedSocialOrderState.presetOrder);
   const resolvedSocialItems = buildResolvedSocialItems(
     {
       github: socialLinksGithub.value,
@@ -1179,7 +1287,7 @@ export const getThemeSettings = (): ThemeSettingsResolved => {
       shell: {
         brandTitle: brandTitle.value,
         quote: quote.value,
-        nav: cloneNavItems(nav.value)
+        nav: cloneNavItems(normalizedNav)
       },
       home: {
         introLead: introLead.value,
@@ -1303,60 +1411,77 @@ export const getThemeSettings = (): ThemeSettingsResolved => {
 
 export const toEditableThemeSettingsPayload = (
   resolved: ThemeSettingsResolved
-): ThemeSettingsEditablePayload => ({
-  revision: getThemeSettingsRevision(),
-  settings: {
-    site: {
-      title: resolved.settings.site.title,
-      description: resolved.settings.site.description,
-      defaultLocale: resolved.settings.site.defaultLocale,
-      footer: {
-        ...resolved.settings.site.footer
-      },
-      socialLinks: {
-        github: resolved.settings.site.socialLinks.github,
-        x: resolved.settings.site.socialLinks.x,
-        email: resolved.settings.site.socialLinks.email,
-        presetOrder: clonePresetSocialOrder(resolved.settings.site.socialLinks.presetOrder),
-        custom: cloneSocialCustomItems(resolved.settings.site.socialLinks.custom)
-      }
+): ThemeSettingsEditablePayload => {
+  const snapshot = buildEditableThemeSettingsSnapshot(resolved);
+
+  return {
+    revision: hashEditableThemeSettingsSnapshot(snapshot),
+    settings: snapshot,
+    sources: cloneThemeSettingsSources(resolved.sources)
+  };
+};
+
+const buildEditableThemeSettingsSnapshot = (
+  resolved: ThemeSettingsResolved
+): EditableThemeSettingsSnapshot => ({
+  site: {
+    title: resolved.settings.site.title,
+    description: resolved.settings.site.description,
+    defaultLocale: resolved.settings.site.defaultLocale,
+    footer: {
+      ...resolved.settings.site.footer
     },
-    shell: {
-      brandTitle: resolved.settings.shell.brandTitle,
-      quote: resolved.settings.shell.quote,
-      nav: cloneNavItems(resolved.settings.shell.nav)
-    },
-    home: {
-      ...resolved.settings.home,
-      introMoreLinks: cloneHomeIntroLinks(resolved.settings.home.introMoreLinks)
-    },
-    page: {
-      essay: { ...resolved.settings.page.essay },
-      archive: { ...resolved.settings.page.archive },
-      bits: {
-        title: resolved.settings.page.bits.title,
-        subtitle: resolved.settings.page.bits.subtitle,
-        defaultAuthor: {
-          ...resolved.settings.page.bits.defaultAuthor
-        }
-      },
-      memo: { ...resolved.settings.page.memo },
-      about: { ...resolved.settings.page.about }
-    },
-    ui: {
-      codeBlock: { ...resolved.settings.ui.codeBlock },
-      readingMode: { ...resolved.settings.ui.readingMode },
-      articleMeta: { ...resolved.settings.ui.articleMeta },
-      layout: { ...resolved.settings.ui.layout }
+    socialLinks: {
+      github: resolved.settings.site.socialLinks.github,
+      x: resolved.settings.site.socialLinks.x,
+      email: resolved.settings.site.socialLinks.email,
+      presetOrder: clonePresetSocialOrder(resolved.settings.site.socialLinks.presetOrder),
+      custom: cloneSocialCustomItems(resolved.settings.site.socialLinks.custom)
     }
   },
-  sources: cloneThemeSettingsSources(resolved.sources)
+  shell: {
+    brandTitle: resolved.settings.shell.brandTitle,
+    quote: resolved.settings.shell.quote,
+    nav: cloneNavItems(resolved.settings.shell.nav)
+  },
+  home: {
+    ...resolved.settings.home,
+    introMoreLinks: cloneHomeIntroLinks(resolved.settings.home.introMoreLinks)
+  },
+  page: {
+    essay: { ...resolved.settings.page.essay },
+    archive: { ...resolved.settings.page.archive },
+    bits: {
+      title: resolved.settings.page.bits.title,
+      subtitle: resolved.settings.page.bits.subtitle,
+      defaultAuthor: {
+        ...resolved.settings.page.bits.defaultAuthor
+      }
+    },
+    memo: { ...resolved.settings.page.memo },
+    about: { ...resolved.settings.page.about }
+  },
+  ui: {
+    codeBlock: { ...resolved.settings.ui.codeBlock },
+    readingMode: { ...resolved.settings.ui.readingMode },
+    articleMeta: { ...resolved.settings.ui.articleMeta },
+    layout: { ...resolved.settings.ui.layout }
+  }
 });
 
-export const getEditableThemeSettingsPayload = (): ThemeSettingsEditablePayload =>
-  toEditableThemeSettingsPayload(getThemeSettings());
+const hashEditableThemeSettingsSnapshot = (snapshot: EditableThemeSettingsSnapshot): string => {
+  const hash = createHash('sha1');
+  hash.update(JSON.stringify(snapshot));
+  return hash.digest('hex');
+};
 
-export const getEditableThemeSettingsState = (): ThemeSettingsEditableState => {
+export const getEditableThemeSettingsPayload = (
+  resolved: ThemeSettingsResolved = getThemeSettings()
+): ThemeSettingsEditablePayload => toEditableThemeSettingsPayload(resolved);
+
+export const getEditableThemeSettingsState = (
+  resolved?: ThemeSettingsResolved
+): ThemeSettingsEditableState => {
   const diagnostics = getThemeSettingsReadDiagnostics();
   if (diagnostics.length > 0) {
     return {
@@ -1370,7 +1495,7 @@ export const getEditableThemeSettingsState = (): ThemeSettingsEditableState => {
 
   return {
     ok: true,
-    payload: getEditableThemeSettingsPayload()
+    payload: getEditableThemeSettingsPayload(resolved ?? getThemeSettings())
   };
 };
 

@@ -5,7 +5,6 @@ import type { APIRoute } from 'astro';
 import {
   getEditableThemeSettingsState,
   getThemeSettings,
-  getThemeSettingsRevision,
   resetThemeSettingsCache,
   type HeroPresetId,
   type HomeIntroLinkKey,
@@ -29,6 +28,8 @@ import {
   ADMIN_HOME_INTRO_MAX_LENGTH,
   ADMIN_LOCALE_RE,
   ADMIN_NAV_IDS,
+  ADMIN_NAV_ORDER_MAX,
+  ADMIN_NAV_ORDER_MIN,
   ADMIN_NAV_ORNAMENT_DEFAULT,
   ADMIN_NAV_ORNAMENT_MAX_LENGTH,
   ADMIN_PAGE_IDS,
@@ -39,6 +40,7 @@ import {
   ADMIN_SOCIAL_PRESET_IDS,
   ADMIN_X_HOSTS,
   getAdminBitsAvatarLocalFilePath,
+  getAdminNavOrderIssues,
   getAdminSocialOrderIssues,
   getAdminHeroImageLocalFilePath,
   getAdminFooterStartYearMax,
@@ -209,6 +211,11 @@ const validateAdminWriteRequest = (request: Request, currentUrl: URL): WriteRequ
   }
 
   return null;
+};
+
+const isDryRunWriteRequest = (url: URL): boolean => {
+  const rawValue = url.searchParams.get('dryRun')?.trim().toLowerCase();
+  return rawValue === '1' || rawValue === 'true';
 };
 
 const collectUnknownKeys = (
@@ -422,11 +429,17 @@ const parseNavItem = (value: unknown, errors: string[], index: number): NavInput
   if (visible === undefined) errors.push(`shell.nav[${index}].visible 必须是布尔值`);
 
   const order = toInteger(value.order);
-  if (order === undefined || order < 1 || order > 999) {
-    errors.push(`shell.nav[${index}].order 必须是 1-999 的整数`);
+  if (order === undefined || order < ADMIN_NAV_ORDER_MIN || order > ADMIN_NAV_ORDER_MAX) {
+    errors.push(`shell.nav[${index}].order 必须是 ${ADMIN_NAV_ORDER_MIN}-${ADMIN_NAV_ORDER_MAX} 的整数`);
   }
 
-  if (!label || visible === undefined || order === undefined || order < 1 || order > 999) {
+  if (
+    !label ||
+    visible === undefined ||
+    order === undefined ||
+    order < ADMIN_NAV_ORDER_MIN ||
+    order > ADMIN_NAV_ORDER_MAX
+  ) {
     return null;
   }
 
@@ -764,18 +777,31 @@ const parsePatch = (
 
           if (parsedNav.length === ADMIN_NAV_IDS.length) {
             const seenIds = new Set<SidebarNavId>();
-            const seenOrder = new Set<number>();
             for (const row of parsedNav) {
               if (seenIds.has(row.id)) errors.push(`shell.nav ID 重复：${row.id}`);
-              if (seenOrder.has(row.order)) errors.push(`shell.nav 排序重复：${row.order}`);
               seenIds.add(row.id);
-              seenOrder.add(row.order);
             }
             for (const navId of ADMIN_NAV_IDS) {
               if (!seenIds.has(navId)) {
                 errors.push(`shell.nav 缺少导航项：${navId}`);
               }
             }
+
+            getAdminNavOrderIssues(
+              parsedNav.map((row) => ({
+                key: row.id,
+                order: row.order
+              }))
+            ).forEach((issue) => {
+              if (issue.type === 'range') {
+                errors.push(
+                  `shell.nav.${issue.key}.order 必须是 ${ADMIN_NAV_ORDER_MIN}-${ADMIN_NAV_ORDER_MAX} 的整数`
+                );
+                return;
+              }
+
+              errors.push(`shell.nav.${issue.key}.order 与其他导航排序冲突：${issue.order}`);
+            });
 
             nextShell.nav = parsedNav.sort((a, b) => {
               if (a.order !== b.order) return a.order - b.order;
@@ -1188,6 +1214,24 @@ const persistSettingsTransaction = async (entries: PersistEntry[]): Promise<Writ
   return operations.map((operation) => operation.group);
 };
 
+// DEV 后台保存是低频操作，串行化写入可保证 revision 校验与实际提交处于同一临界区。
+let adminSettingsWriteLock: Promise<void> = Promise.resolve();
+
+const withAdminSettingsWriteLock = async <T>(task: () => Promise<T>): Promise<T> => {
+  const previousLock = adminSettingsWriteLock;
+  let releaseLock!: () => void;
+  adminSettingsWriteLock = new Promise<void>((resolve) => {
+    releaseLock = resolve;
+  });
+
+  await previousLock;
+  try {
+    return await task();
+  } finally {
+    releaseLock();
+  }
+};
+
 export const GET: APIRoute = async () => {
   const payload = import.meta.env.DEV
     ? getEditableThemeSettingsState()
@@ -1203,6 +1247,7 @@ export const POST: APIRoute = async ({ request, url }) => {
     return new Response('Not Found', { status: 404 });
   }
 
+  const isDryRun = isDryRunWriteRequest(url);
   const requestError = validateAdminWriteRequest(request, url);
   if (requestError) {
     return new Response(
@@ -1217,14 +1262,6 @@ export const POST: APIRoute = async ({ request, url }) => {
       ),
       { status: requestError.status, headers: JSON_HEADERS }
     );
-  }
-
-  const editableState = getEditableThemeSettingsState();
-  if (!editableState.ok) {
-    return new Response(JSON.stringify(editableState, null, 2), {
-      status: 409,
-      headers: JSON_HEADERS
-    });
   }
 
   let body: unknown;
@@ -1273,68 +1310,122 @@ export const POST: APIRoute = async ({ request, url }) => {
     );
   }
 
-  const currentRevision = getThemeSettingsRevision();
-  if (revision !== currentRevision) {
-    resetThemeSettingsCache();
-    const latestEditableState = getEditableThemeSettingsState();
-    if (!latestEditableState.ok) {
-      return new Response(JSON.stringify(latestEditableState, null, 2), {
+  return withAdminSettingsWriteLock(async () => {
+    const currentResolved = getThemeSettings();
+    const editableState = getEditableThemeSettingsState(currentResolved);
+    if (!editableState.ok) {
+      return new Response(JSON.stringify(editableState, null, 2), {
         status: 409,
         headers: JSON_HEADERS
       });
     }
 
-    return new Response(
-      JSON.stringify(
-        {
-          ok: false,
-          errors: ['检测到配置已在外部更新，已拒绝覆盖并同步最新配置，请确认后再保存'],
-          results: createResults([]),
-          payload: latestEditableState.payload
-        },
-        null,
-        2
-      ),
-      { status: 409, headers: JSON_HEADERS }
-    );
-  }
+    const currentRevision = editableState.payload.revision;
+    if (revision !== currentRevision) {
+      resetThemeSettingsCache();
+      const latestResolved = getThemeSettings();
+      const latestEditableState = getEditableThemeSettingsState(latestResolved);
+      if (!latestEditableState.ok) {
+        return new Response(JSON.stringify(latestEditableState, null, 2), {
+          status: 409,
+          headers: JSON_HEADERS
+        });
+      }
 
-  const current = getThemeSettings().settings;
-  const { patch, writtenGroups, errors } = parsePatch(settingsInput, current);
-
-  if (errors.length) {
-    return new Response(
-      JSON.stringify(
-        {
-          ok: false,
-          errors,
-          results: createResults(writtenGroups)
-        },
-        null,
-        2
-      ),
-      { status: 400, headers: JSON_HEADERS }
-    );
-  }
-
-  const results = createResults(writtenGroups);
-  const entries = createPersistEntries(patch, writtenGroups);
-
-  try {
-    const committedGroups = await persistSettingsTransaction(entries);
-    for (const group of committedGroups) {
-      results[group].written = true;
-    }
-
-    resetThemeSettingsCache();
-    const latestEditableState = getEditableThemeSettingsState();
-    if (!latestEditableState.ok) {
-      console.error('[astro-whono] Settings persisted but failed to reload editable payload:', latestEditableState);
       return new Response(
         JSON.stringify(
           {
             ok: false,
-            errors: ['配置文件已写入，但重新读取 settings JSON 失败，请先修复损坏文件后再刷新后台'],
+            errors: ['检测到配置已在外部更新，已拒绝覆盖并同步最新配置，请确认后再保存'],
+            results: createResults([]),
+            payload: latestEditableState.payload
+          },
+          null,
+          2
+        ),
+        { status: 409, headers: JSON_HEADERS }
+      );
+    }
+
+    const { patch, writtenGroups, errors } = parsePatch(settingsInput, currentResolved.settings);
+
+    if (errors.length) {
+      return new Response(
+        JSON.stringify(
+          {
+            ok: false,
+            errors,
+            results: createResults(writtenGroups)
+          },
+          null,
+          2
+        ),
+        { status: 400, headers: JSON_HEADERS }
+      );
+    }
+
+    const results = createResults(writtenGroups);
+    if (isDryRun) {
+      return new Response(
+        JSON.stringify(
+          {
+            ok: true,
+            dryRun: true,
+            results
+          },
+          null,
+          2
+        ),
+        { headers: JSON_HEADERS }
+      );
+    }
+
+    const entries = createPersistEntries(patch, writtenGroups);
+
+    try {
+      const committedGroups = await persistSettingsTransaction(entries);
+      for (const group of committedGroups) {
+        results[group].written = true;
+      }
+
+      resetThemeSettingsCache();
+      const latestResolved = getThemeSettings();
+      const latestEditableState = getEditableThemeSettingsState(latestResolved);
+      if (!latestEditableState.ok) {
+        console.error('[astro-whono] Settings persisted but failed to reload editable payload:', latestEditableState);
+        return new Response(
+          JSON.stringify(
+            {
+              ok: false,
+              errors: ['配置文件已写入，但重新读取 settings JSON 失败，请先修复损坏文件后再刷新后台'],
+              results
+            },
+            null,
+            2
+          ),
+          { status: 500, headers: JSON_HEADERS }
+        );
+      }
+
+      return new Response(
+        JSON.stringify(
+          {
+            ok: true,
+            results,
+            payload: latestEditableState.payload
+          },
+          null,
+          2
+        ),
+        { headers: JSON_HEADERS }
+      );
+    } catch (error) {
+      console.error('[astro-whono] Failed to persist admin settings:', error);
+      return new Response(
+        JSON.stringify(
+          {
+            ok: false,
+            errors: ['写入配置文件失败，请检查本地文件权限或日志'],
             results
           },
           null,
@@ -1343,32 +1434,5 @@ export const POST: APIRoute = async ({ request, url }) => {
         { status: 500, headers: JSON_HEADERS }
       );
     }
-
-    return new Response(
-      JSON.stringify(
-        {
-          ok: true,
-          results,
-          payload: latestEditableState.payload
-        },
-        null,
-        2
-      ),
-      { headers: JSON_HEADERS }
-    );
-  } catch (error) {
-    console.error('[astro-whono] Failed to persist admin settings:', error);
-    return new Response(
-      JSON.stringify(
-        {
-          ok: false,
-          errors: ['写入配置文件失败，请检查本地文件权限或日志'],
-          results
-        },
-        null,
-        2
-      ),
-      { status: 500, headers: JSON_HEADERS }
-    );
-  }
+  });
 };

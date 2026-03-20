@@ -69,10 +69,16 @@ export const ADMIN_SOCIAL_PRESET_ORDER_DEFAULT: Record<SiteSocialPresetId, numbe
 };
 export const ADMIN_SOCIAL_ORDER_MIN = 1;
 export const ADMIN_SOCIAL_ORDER_MAX = ADMIN_SOCIAL_PRESET_IDS.length + ADMIN_SOCIAL_CUSTOM_LIMIT;
+export const ADMIN_NAV_ORDER_MIN = 1;
+export const ADMIN_NAV_ORDER_MAX = 999;
 
 type AdminSocialOrderScope = 'preset' | 'custom';
 type AdminSocialOrderInput = {
   key: string;
+  order: number;
+};
+type AdminNavOrderInput = {
+  key: SidebarNavId;
   order: number;
 };
 
@@ -80,6 +86,11 @@ export type AdminSocialOrderIssue = {
   type: 'range' | 'duplicate';
   scope: AdminSocialOrderScope;
   key: string;
+  order: number;
+};
+export type AdminNavOrderIssue = {
+  type: 'range' | 'duplicate';
+  key: SidebarNavId;
   order: number;
 };
 
@@ -146,6 +157,9 @@ export const isAdminSocialIconKey = (value: string): value is SiteSocialIconKey 
 export const isAdminSocialOrderValue = (value: number): boolean =>
   Number.isInteger(value) && value >= ADMIN_SOCIAL_ORDER_MIN && value <= ADMIN_SOCIAL_ORDER_MAX;
 
+export const isAdminNavOrderValue = (value: number): boolean =>
+  Number.isInteger(value) && value >= ADMIN_NAV_ORDER_MIN && value <= ADMIN_NAV_ORDER_MAX;
+
 export const getAdminSocialOrderIssues = (
   presetOrder: Readonly<SiteSocialPresetOrder>,
   customItems: readonly AdminSocialOrderInput[]
@@ -179,6 +193,30 @@ export const getAdminSocialOrderIssues = (
 
     if ((orderCounts.get(entry.order) ?? 0) > 1) {
       issues.push({ type: 'duplicate', ...entry });
+    }
+  });
+
+  return issues;
+};
+
+export const getAdminNavOrderIssues = (items: readonly AdminNavOrderInput[]): AdminNavOrderIssue[] => {
+  const orderCounts = new Map<number, number>();
+
+  items.forEach((item) => {
+    if (!isAdminNavOrderValue(item.order)) return;
+    orderCounts.set(item.order, (orderCounts.get(item.order) ?? 0) + 1);
+  });
+
+  const issues: AdminNavOrderIssue[] = [];
+
+  items.forEach((item) => {
+    if (!isAdminNavOrderValue(item.order)) {
+      issues.push({ type: 'range', ...item });
+      return;
+    }
+
+    if ((orderCounts.get(item.order) ?? 0) > 1) {
+      issues.push({ type: 'duplicate', ...item });
     }
   });
 
