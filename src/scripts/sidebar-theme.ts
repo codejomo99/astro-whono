@@ -23,7 +23,7 @@ const applyTheme = (theme: string) => {
   const dark = theme === 'dark';
   if (themeBtn) {
     themeBtn.setAttribute('aria-pressed', dark ? 'true' : 'false');
-    const label = dark ? '浅色模式' : '夜间模式';
+    const label = dark ? '라이트 모드' : '다크 모드';
     themeBtn.setAttribute('aria-label', label);
     themeBtn.setAttribute('title', label);
   }
@@ -49,12 +49,12 @@ const setReaderDisabled = (disabled: boolean) => {
   readerBtn.setAttribute('aria-pressed', 'false');
   readerBtn.setAttribute('aria-disabled', disabled ? 'true' : 'false');
   if (disabled) {
-    readerBtn.setAttribute('title', '阅读模式（仅文章/小记页可用）');
-    readerBtn.setAttribute('aria-label', '阅读模式（仅文章/小记页可用）');
+    readerBtn.setAttribute('title', '읽기 모드 (글/메모 페이지에서만 사용 가능)');
+    readerBtn.setAttribute('aria-label', '읽기 모드 (글/메모 페이지에서만 사용 가능)');
     readerBtn.tabIndex = -1;
   } else {
-    readerBtn.setAttribute('title', '阅读模式');
-    readerBtn.setAttribute('aria-label', '阅读模式');
+    readerBtn.setAttribute('title', '읽기 모드');
+    readerBtn.setAttribute('aria-label', '읽기 모드');
     readerBtn.tabIndex = 0;
   }
 };
@@ -70,8 +70,8 @@ const applyReader = (on: boolean) => {
     readerBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
   }
   if (readerExit) {
-    readerExit.setAttribute('aria-label', '退出阅读');
-    readerExit.setAttribute('title', '退出阅读');
+    readerExit.setAttribute('aria-label', '읽기 모드 종료');
+    readerExit.setAttribute('title', '읽기 모드 종료');
   }
   setVisible(readerExit as HTMLElement | null, on);
   updateFloating();

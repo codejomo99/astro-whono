@@ -180,8 +180,8 @@ const createToolbar = ({ langLabel, iconSvg, lineCount }) => {
               className: ['code-copy'],
               type: 'button',
               disabled: true,
-              'aria-label': '复制代码',
-              title: '复制代码',
+              'aria-label': '코드 복사',
+              title: '코드 복사',
               'data-state': 'idle'
             },
             children: [createCopyIcon(), createCheckIcon()]
