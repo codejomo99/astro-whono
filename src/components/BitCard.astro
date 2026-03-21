@@ -80,7 +80,7 @@ const hasTags = Boolean(placeText || normalTagItems.length);
         class="bit-media-item bit-media-item--single"
         data-bit-image-button
         data-bit-image-index="0"
-        aria-label="查看图片预览"
+        aria-label="이미지 미리보기"
       >
         <img
           src={firstImage.src}
@@ -102,7 +102,7 @@ const hasTags = Boolean(placeText || normalTagItems.length);
               class={`bit-media-item${index === wideIndex ? ' bit-media-item--wide' : ''}${isMore ? ' bit-media-item--more' : ''}`}
               data-bit-image-button
               data-bit-image-index={index}
-              aria-label={isMore ? `查看全部图片（共 ${imageItems.length} 张）` : `图片 ${index + 1}`}
+              aria-label={isMore ? `전체 이미지 보기 (총 ${imageItems.length}장)` : `이미지 ${index + 1}`}
             >
               <img
                 src={image.src}
@@ -115,7 +115,7 @@ const hasTags = Boolean(placeText || normalTagItems.length);
                 <>
                   <span class="bit-media-more" aria-hidden="true" data-bit-image-open-hidden={maxVisible}>
                     <span class="bit-media-more-short">+ {imageItems.length - maxVisible}</span>
-                    <span class="bit-media-more-full">查看其余{imageItems.length - maxVisible}张</span>
+                    <span class="bit-media-more-full">나머지 {imageItems.length - maxVisible}장 보기</span>
                   </span>
                 </>
               ) : null}

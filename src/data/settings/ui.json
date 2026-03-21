@@ -7,7 +7,7 @@
   },
   "articleMeta": {
     "showDate": true,
-    "dateLabel": "发布于：",
+    "dateLabel": "게시일: ",
     "showTags": true,
     "showWordCount": true,
     "showReadingTime": true

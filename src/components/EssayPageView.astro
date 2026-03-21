@@ -31,20 +31,20 @@ const {
   }
 } = getThemeSettings();
 
-const pageTitleText = page.essay.title || '随笔';
-const pageTitleParts = [pageTitleText, currentPage > 1 ? `第 ${currentPage} 页` : null].filter(Boolean);
+const pageTitleText = page.essay.title || '수필';
+const pageTitleParts = [pageTitleText, currentPage > 1 ? `${currentPage} 페이지` : null].filter(Boolean);
 const pageTitle = pageTitleParts.join(' · ');
 const subtitleText = joinPageSubtitleText(
   page.essay.subtitle,
-  `共 ${resultCount} 篇`,
-  totalPages > 1 ? `第 ${currentPage} / ${totalPages} 页` : null
+  `총 ${resultCount} 편`,
+  totalPages > 1 ? `${currentPage} / ${totalPages} 페이지` : null
 );
 const pageDescription = joinPageSubtitleText(
-  `${pageTitleText}列表`,
+  `${pageTitleText} 목록`,
   page.essay.subtitle,
-  `共 ${resultCount} 篇`,
-  totalPages > 1 ? `第 ${currentPage} / ${totalPages} 页` : null
-) ?? `${pageTitleText}列表`;
+  `총 ${resultCount} 편`,
+  totalPages > 1 ? `${currentPage} / ${totalPages} 페이지` : null
+) ?? `${pageTitleText} 목록`;
 const fallbackListId = 'essay-tag-list';
 ---
 
@@ -61,7 +61,7 @@ const fallbackListId = 'essay-tag-list';
       pickerHref={`#${fallbackListId}`}
       fallbackListId={fallbackListId}
       dialogTitleId="essay-tag-dialog-title"
-      searchAriaLabel={`搜索${pageTitleText}`}
+      searchAriaLabel={`${pageTitleText} 검색`}
       headerClass="page-header page-header--essay page-header--with-search"
     />
   </div>
@@ -82,11 +82,11 @@ const fallbackListId = 'essay-tag-list';
   </div>
 
   {totalPages > 1 ? (
-    <nav class="pagination" aria-label={`${pageTitleText}分页`}>
+    <nav class="pagination" aria-label={`${pageTitleText} 페이지 이동`}>
       <div class="pagination__inner">
-        {prevPath ? <a class="pagination__link" rel="prev" href={withBase(prevPath)}>上一页</a> : null}
+        {prevPath ? <a class="pagination__link" rel="prev" href={withBase(prevPath)}>이전 페이지</a> : null}
         {nextPath ? (
-          <a class="pagination__link pagination__link--next" rel="next" href={withBase(nextPath)}>下一页</a>
+          <a class="pagination__link pagination__link--next" rel="next" href={withBase(nextPath)}>다음 페이지</a>
         ) : null}
       </div>
     </nav>

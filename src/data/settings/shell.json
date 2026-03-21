@@ -4,35 +4,35 @@
   "nav": [
     {
       "id": "essay",
-      "label": "随笔",
+      "label": "수필",
       "ornament": "·",
       "visible": true,
       "order": 1
     },
     {
       "id": "bits",
-      "label": "絮语",
+      "label": "조각글",
       "ornament": "·",
       "visible": true,
       "order": 2
     },
     {
       "id": "memo",
-      "label": "小记",
+      "label": "메모",
       "ornament": "·",
       "visible": true,
       "order": 3
     },
     {
       "id": "archive",
-      "label": "归档",
+      "label": "아카이브",
       "ornament": "·",
       "visible": true,
       "order": 4
     },
     {
       "id": "about",
-      "label": "关于",
+      "label": "소개",
       "ornament": "·",
       "visible": true,
       "order": 5

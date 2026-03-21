@@ -35,19 +35,19 @@ const {
   }
 } = getThemeSettings();
 
-const pageTitleText = page.bits.title || '絮语';
-const pageTitleParts = [pageTitleText, currentPage > 1 ? `第 ${currentPage} 页` : null].filter(Boolean);
+const pageTitleText = page.bits.title || '조각글';
+const pageTitleParts = [pageTitleText, currentPage > 1 ? `${currentPage} 페이지` : null].filter(Boolean);
 const pageTitle = pageTitleParts.join(' · ');
 const subtitleText = joinPageSubtitleText(
   page.bits.subtitle,
-  totalPages > 1 ? `第 ${currentPage} / ${totalPages} 页` : null
+  totalPages > 1 ? `${currentPage} / ${totalPages} 페이지` : null
 );
 const pageDescription = joinPageSubtitleText(
-  `${pageTitleText}列表`,
+  `${pageTitleText} 목록`,
   page.bits.subtitle,
-  `共 ${resultCount} 条絮语`,
-  totalPages > 1 ? `第 ${currentPage} / ${totalPages} 页` : null
-) ?? `${pageTitleText}列表`;
+  `총 ${resultCount} 개 조각글`,
+  totalPages > 1 ? `${currentPage} / ${totalPages} 페이지` : null
+) ?? `${pageTitleText} 목록`;
 
 const primaryYearOptions = yearOptions.slice(0, MAX_PRIMARY_BITS_FILTER_YEARS);
 const overflowYearOptions = yearOptions.slice(MAX_PRIMARY_BITS_FILTER_YEARS);
@@ -80,7 +80,7 @@ const cards = await Promise.all(
           data-bits-year-filter
           data-bits-client-control
           role="group"
-          aria-label="按年份筛选絮语"
+          aria-label="연도별 조각글 필터"
         >
           <span class="bits-year-filter__cursor" data-bits-year-cursor aria-hidden="true"></span>
           <button
@@ -88,10 +88,10 @@ const cards = await Promise.all(
             type="button"
             data-bits-year-item
             data-bits-year=""
-            aria-label="显示全部絮语"
+            aria-label="전체 조각글 보기"
             aria-pressed="true"
           >
-            全部
+            전체
           </button>
           {primaryYearOptions.map((option) => (
             <button
@@ -99,7 +99,7 @@ const cards = await Promise.all(
               type="button"
               data-bits-year-item
               data-bits-year={option.value}
-              aria-label={`筛选 ${option.value} 年絮语，共 ${option.count} 条`}
+              aria-label={`${option.value}년 조각글 필터, 총 ${option.count}개`}
               aria-pressed="false"
             >
               {option.value}
@@ -111,11 +111,11 @@ const cards = await Promise.all(
                 class="bits-year-filter__item bits-year-filter__item--more"
                 type="button"
                 data-bits-year-more-trigger
-                aria-label="打开更多年份筛选"
+                aria-label="더 많은 연도 필터 열기"
                 aria-expanded="false"
                 aria-controls="bits-year-more-menu"
               >
-                <span data-bits-year-more-label>更多</span>
+                <span data-bits-year-more-label>더보기</span>
                 <span class="bits-year-filter__caret" aria-hidden="true"></span>
               </button>
               <div
@@ -123,7 +123,7 @@ const cards = await Promise.all(
                 id="bits-year-more-menu"
                 data-bits-year-menu
                 hidden
-                aria-label="更多年份筛选"
+                aria-label="더 많은 연도 필터"
               >
                 <div class="bits-year-menu__list">
                   {overflowYearOptions.map((option) => (
@@ -132,11 +132,11 @@ const cards = await Promise.all(
                       type="button"
                       data-bits-year-menu-item
                       data-bits-year={option.value}
-                      aria-label={`筛选 ${option.value} 年絮语，共 ${option.count} 条`}
+                      aria-label={`${option.value}년 조각글 필터, 총 ${option.count}개`}
                       aria-pressed="false"
                     >
                       <span class="bits-year-menu__item-label">{option.value}</span>
-                      <span class="bits-year-menu__item-count">{option.count} 条</span>
+                      <span class="bits-year-menu__item-count">{option.count} 개</span>
                     </button>
                   ))}
                 </div>
@@ -149,29 +149,29 @@ const cards = await Promise.all(
       <div class="bits-controls__actions">
         <div class="bits-controls__search-cluster" data-has-year-filter={yearOptions.length > 0 ? 'true' : 'false'}>
           <form class="bits-search" role="search" data-bits-search-form data-bits-client-control>
-            <label class="sr-only" for="bits-search">搜索絮语</label>
+            <label class="sr-only" for="bits-search">조각글 검색</label>
             <input
               id="bits-search"
               type="search"
-              placeholder="搜索：关键词 / 标签"
+              placeholder="검색: 키워드 / 태그"
               autocomplete="off"
               enterkeyhint="search"
               aria-controls="bits-search-results-panel"
             />
             <button class="bits-search-btn" id="bits-search-btn" type="submit" aria-controls="bits-search-results-panel">
-              搜索
+              검색
             </button>
           </form>
           {yearOptions.length > 0 ? (
             <div class="bits-year-select-wrap" data-bits-client-control>
-              <label class="sr-only" for="bits-year-select">按年份筛选絮语</label>
+              <label class="sr-only" for="bits-year-select">연도별 조각글 필터</label>
               <select
                 class="bits-year-select"
                 id="bits-year-select"
                 data-bits-year-select
-                aria-label="按年份筛选絮语"
+                aria-label="연도별 조각글 필터"
               >
-                <option value="">全部</option>
+                <option value="">전체</option>
                 {yearOptions.map((option) => (
                   <option value={option.value}>{option.value}</option>
                 ))}
@@ -186,12 +186,12 @@ const cards = await Promise.all(
           data-new-bit
           data-bits-client-control
           data-bits-draft-url="bits/draft-dialog/"
-          aria-label="碎碎念"
+          aria-label="한마디"
           aria-haspopup="dialog"
           aria-controls="bits-draft-dialog"
         >
           <span class="new-icon" aria-hidden="true">✍</span>
-          <span class="new-label">碎碎念</span>
+          <span class="new-label">한마디</span>
         </button>
       </div>
     </div>
@@ -208,11 +208,11 @@ const cards = await Promise.all(
     </div>
 
     {totalPages > 1 ? (
-      <nav class="pagination" aria-label={`${pageTitleText}分页`}>
+      <nav class="pagination" aria-label={`${pageTitleText} 페이지 이동`}>
         <div class="pagination__inner">
-          {prevPath ? <a class="pagination__link" rel="prev" href={withBase(prevPath)}>上一页</a> : null}
+          {prevPath ? <a class="pagination__link" rel="prev" href={withBase(prevPath)}>이전 페이지</a> : null}
           {nextPath ? (
-            <a class="pagination__link pagination__link--next" rel="next" href={withBase(nextPath)}>下一页</a>
+            <a class="pagination__link pagination__link--next" rel="next" href={withBase(nextPath)}>다음 페이지</a>
           ) : null}
         </div>
       </nav>
@@ -224,11 +224,11 @@ const cards = await Promise.all(
     class="bits-search-results"
     data-bits-search-results
     hidden
-    aria-label="搜索结果"
+    aria-label="검색 결과"
   >
     <div class="bits-search-results__header">
-      <p class="bits-search-results__summary" data-bits-search-results-summary role="status" aria-live="polite">搜索结果</p>
-      <button class="bits-search-results__clear" type="button" data-bits-search-clear>重置筛选</button>
+      <p class="bits-search-results__summary" data-bits-search-results-summary role="status" aria-live="polite">검색 결과</p>
+      <button class="bits-search-results__clear" type="button" data-bits-search-clear>필터 초기화</button>
     </div>
     <div class="bits-search-results__list" data-bits-search-results-list></div>
   </section>
@@ -239,13 +239,13 @@ const cards = await Promise.all(
         display: none !important;
       }
     </style>
-    <p class="bits-noscript-note">搜索、年份筛选与草稿生成功能需要 JavaScript，当前仅保留列表浏览。</p>
+    <p class="bits-noscript-note">검색, 연도 필터, 초안 생성 기능은 JavaScript가 필요합니다. 현재는 목록 탐색만 가능합니다.</p>
   </noscript>
 
   <div id="bits-draft-root"></div>
   <Lightbox
     id="lightbox"
-    label="图片预览"
+    label="이미지 미리보기"
     enableZoom={true}
     enablePan={true}
     enableSwipeDownClose={true}
@@ -265,7 +265,7 @@ const cards = await Promise.all(
     const base = import.meta.env.BASE_URL ?? '/';
     const withBase = createWithBase(base);
     const fragmentPath = openBtn?.dataset.bitsDraftUrl ?? 'bits/draft-dialog/';
-    const defaultLabel = labelEl?.textContent?.trim() || '碎碎念';
+    const defaultLabel = labelEl?.textContent?.trim() || '한마디';
 
     let fragmentPromise: Promise<void> | null = null;
     let controllerPromise: Promise<{ open: (options?: { opener?: HTMLElement | null }) => void }> | null = null;
@@ -286,7 +286,7 @@ const cards = await Promise.all(
       openBtn.toggleAttribute('data-loading', loading);
       openBtn.setAttribute('aria-busy', String(loading));
       if (labelEl) {
-        labelEl.textContent = loading ? '加载中…' : defaultLabel;
+        labelEl.textContent = loading ? '로딩 중…' : defaultLabel;
       }
     };
 
@@ -334,13 +334,13 @@ const cards = await Promise.all(
       event.preventDefault();
       if (openBtn.disabled) return;
       setLoading(true);
-      setLoadStatus('正在加载碎碎念工具…');
+      setLoadStatus('한마디 도구 로딩 중…');
       try {
         const controller = await loadDraftController();
         setLoadStatus('');
         controller.open({ opener: openBtn });
       } catch {
-        setLoadStatus('碎碎念工具加载失败，请重试。', 'error');
+        setLoadStatus('한마디 도구 로딩에 실패했습니다. 다시 시도해주세요.', 'error');
       } finally {
         setLoading(false);
       }

@@ -18,7 +18,7 @@ export const ADMIN_HERO_PRESET_SET: ReadonlySet<HeroPresetId> = new Set(ADMIN_HE
 export const ADMIN_HERO_IMAGE_ALT_DEFAULT = 'Whono theme preview';
 export const ADMIN_HERO_IMAGE_ALT_MAX_LENGTH = 120;
 
-export const ADMIN_ARTICLE_META_DATE_LABEL_DEFAULT = '发布于：';
+export const ADMIN_ARTICLE_META_DATE_LABEL_DEFAULT = '게시일: ';
 export const ADMIN_ARTICLE_META_DATE_LABEL_MAX_LENGTH = 20;
 
 export const ADMIN_SIDEBAR_DIVIDER_VARIANTS = [
@@ -29,9 +29,9 @@ export const ADMIN_SIDEBAR_DIVIDER_VARIANTS = [
 export const ADMIN_SIDEBAR_DIVIDER_DEFAULT: SidebarDividerVariant = 'default';
 export const ADMIN_SIDEBAR_DIVIDER_SET: ReadonlySet<SidebarDividerVariant> = new Set(ADMIN_SIDEBAR_DIVIDER_VARIANTS);
 export const ADMIN_SIDEBAR_DIVIDER_OPTIONS = [
-  { id: 'default', label: '默认' },
-  { id: 'subtle', label: '弱化' },
-  { id: 'none', label: '隐藏' }
+  { id: 'default', label: '기본' },
+  { id: 'subtle', label: '약화' },
+  { id: 'none', label: '숨기기' }
 ] as const satisfies readonly {
   id: SidebarDividerVariant;
   label: string;
@@ -49,12 +49,12 @@ export const ADMIN_HOME_INTRO_LINK_DEFAULT = ['archive', 'essay'] as const satis
 export const ADMIN_HOME_INTRO_LINK_LIMIT = 2;
 export const ADMIN_HOME_INTRO_LINK_KEY_SET: ReadonlySet<HomeIntroLinkKey> = new Set(ADMIN_HOME_INTRO_LINK_KEYS);
 export const ADMIN_HOME_INTRO_LINK_OPTIONS = [
-  { id: 'archive', label: '归档', href: '/archive/' },
-  { id: 'essay', label: '随笔', href: '/essay/' },
-  { id: 'bits', label: '絮语', href: '/bits/' },
-  { id: 'memo', label: '小记', href: '/memo/' },
-  { id: 'about', label: '关于', href: '/about/' },
-  { id: 'tag', label: '#标签', href: '/archive/?picker=tag' }
+  { id: 'archive', label: '아카이브', href: '/archive/' },
+  { id: 'essay', label: '수필', href: '/essay/' },
+  { id: 'bits', label: '조각글', href: '/bits/' },
+  { id: 'memo', label: '메모', href: '/memo/' },
+  { id: 'about', label: '소개', href: '/about/' },
+  { id: 'tag', label: '#태그', href: '/archive/?picker=tag' }
 ] as const satisfies readonly {
   id: HomeIntroLinkKey;
   label: string;

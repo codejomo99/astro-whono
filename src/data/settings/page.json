@@ -1,15 +1,15 @@
 {
   "essay": {
-    "title": "随笔",
-    "subtitle": "随笔与杂记"
+    "title": "수필",
+    "subtitle": "수필과 잡기"
   },
   "archive": {
-    "title": "归档",
+    "title": "아카이브",
     "subtitle": null
   },
   "bits": {
-    "title": "絮语",
-    "subtitle": "生活不只是长篇",
+    "title": "조각글",
+    "subtitle": "삶은 긴 글만으로 이루어지지 않습니다",
     "defaultAuthor": {
       "name": "Whono",
       "avatar": "author/avatar.webp"
@@ -20,7 +20,7 @@
     "subtitle": null
   },
   "about": {
-    "title": "关于",
+    "title": "소개",
     "subtitle": null
   }
 }

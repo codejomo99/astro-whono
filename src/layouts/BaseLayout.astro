@@ -29,7 +29,7 @@ const siteTitle = settings.site.title;
 const brandTitle = settings.shell.brandTitle ?? siteTitle;
 const metaDescription = description ?? settings.site.description;
 const fullTitle = title ? `${title} | ${siteTitle}` : siteTitle;
-const htmlLang = settings.site.defaultLocale || 'zh-CN';
+const htmlLang = settings.site.defaultLocale || 'ko-KR';
 const footerStartYear = settings.site.footer.startYear;
 const footerShowCurrentYear = settings.site.footer.showCurrentYear;
 const footerCopyright = settings.site.footer.copyright;
@@ -99,7 +99,7 @@ const withBase = createWithBase(base);
     <slot name="head" />
   </head>
   <body class={bodyClass}>
-    <a class="skip-link" href="#content">跳到内容</a>
+    <a class="skip-link" href="#content">본문으로 건너뛰기</a>
     <div class="shell" data-sidebar-divider={sidebarDividerVariant}>
       <Sidebar siteTitle={brandTitle} activeNavId={activeNavId} />
       <div class="divider" aria-hidden="true"></div>
@@ -114,8 +114,8 @@ const withBase = createWithBase(base);
       <button
         type="button"
         class="icon-button float-action scroll-top"
-        aria-label="回到顶部"
-        title="回到顶部"
+        aria-label="맨 위로"
+        title="맨 위로"
         aria-hidden="true"
         tabindex="-1"
       >
@@ -169,12 +169,12 @@ const withBase = createWithBase(base);
           if (!copied) return;
 
           button.dataset.state = 'copied';
-          button.setAttribute('aria-label', '已复制');
-          button.setAttribute('title', '已复制');
+          button.setAttribute('aria-label', '복사됨');
+          button.setAttribute('title', '복사됨');
           window.setTimeout(() => {
             button.dataset.state = 'idle';
-            button.setAttribute('aria-label', '复制代码');
-            button.setAttribute('title', '复制代码');
+            button.setAttribute('aria-label', '코드 복사');
+            button.setAttribute('title', '코드 복사');
           }, 1200);
         });
       })();

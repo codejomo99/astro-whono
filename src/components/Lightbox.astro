@@ -2,7 +2,7 @@
 const {
   id = 'lightbox',
   className = '',
-  label = '图片预览',
+  label = '이미지 미리보기',
   enableZoom = false,
   enablePan = false,
   enableSwipeDownClose = false,
@@ -27,10 +27,10 @@ const classes = className ? `lightbox ${className}` : 'lightbox';
   tabindex="-1"
   hidden
 >
-  <button class="lightbox-close" type="button" data-lightbox-close aria-label="关闭">×</button>
+  <button class="lightbox-close" type="button" data-lightbox-close aria-label="닫기">×</button>
   <div class="lightbox-navs" aria-hidden="true">
-    <button class="lightbox-nav lightbox-prev" type="button" data-lightbox-prev aria-label="上一张">‹</button>
-    <button class="lightbox-nav lightbox-next" type="button" data-lightbox-next aria-label="下一张">›</button>
+    <button class="lightbox-nav lightbox-prev" type="button" data-lightbox-prev aria-label="이전">‹</button>
+    <button class="lightbox-nav lightbox-next" type="button" data-lightbox-next aria-label="다음">›</button>
   </div>
   <figure class="lightbox-figure">
     <img data-lightbox-image alt="" />

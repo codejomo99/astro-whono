@@ -222,10 +222,10 @@ if (!root) {
 
   const getStatusPrefix = (query: string, totalMatches: number) => {
     if (query && activeTagLabel) {
-      return `标签 #${activeTagLabel} 下共命中 ${totalMatches} 条`;
+      return `태그 #${activeTagLabel} 내 총 ${totalMatches}건 일치`;
     }
     if (query) {
-      return totalMatches === 0 ? '未找到匹配内容' : `共命中 ${totalMatches} 条`;
+      return totalMatches === 0 ? '일치하는 항목 없음' : `총 ${totalMatches}건 일치`;
     }
     return '';
   };
@@ -238,18 +238,18 @@ if (!root) {
     }
 
     if (totalMatches === 0) {
-      setStatus('未找到匹配内容');
+      setStatus('일치하는 항목 없음');
       return;
     }
     if (visibleMatches === totalMatches) {
-      setStatus(query && !activeTagKey ? `命中 ${totalMatches} 条` : prefix);
+      setStatus(query && !activeTagKey ? `${totalMatches}건 일치` : prefix);
       return;
     }
     if (visibleMatches === 0) {
-      setStatus(`${prefix}（当前页无结果，可翻页继续查看）`);
+      setStatus(`${prefix} (현재 페이지에 결과 없음, 페이지를 넘겨 확인하세요)`);
       return;
     }
-    setStatus(`${prefix}（当前页 ${visibleMatches} 条，可翻页查看更多）`);
+    setStatus(`${prefix} (현재 페이지 ${visibleMatches}건, 페이지를 넘겨 더 보기)`);
   };
 
   const scheduleApplyFilter = (delay = FILTER_DEBOUNCE_MS) => {
@@ -264,7 +264,7 @@ if (!root) {
 
   const setDegradedMode = () => {
     if (input) {
-      input.placeholder = '索引加载失败';
+      input.placeholder = '색인 로딩 실패';
       input.disabled = true;
       input.setAttribute('aria-disabled', 'true');
     }
@@ -275,7 +275,7 @@ if (!root) {
     setSearchOpen(true);
     showAllItems();
     syncSections(false);
-    setStatus('索引加载失败，已禁用搜索');
+    setStatus('색인 로딩 실패, 검색이 비활성화되었습니다');
   };
 
   const loadIndex = async () => {
@@ -284,7 +284,7 @@ if (!root) {
     if (indexFailed) return null;
 
     if (!indexPromise) {
-      setStatus('正在加载索引...', { visible: false });
+      setStatus('색인 로딩 중...', { visible: false });
       indexPromise = fetch(indexUrl, {
         cache: shouldBypassIndexCache ? 'no-store' : 'default'
       })
