@@ -1,6 +1,6 @@
 {
-  "introLead": "오픈소스 글쓰기 테마와 예시 콘텐츠 라이브러리입니다: 수필/essay, 메모/memo, 아카이브/archive, 조각글/bits를 포함하며, 사용 및 설정은 README를 참고하세요.",
-  "introMore": "더 많은 글은",
+  "introLead": "AI와 대화하며 만든 기록들, 그리고 개발 이야기들을 쌓아가는 공간입니다.",
+  "introMore": "다양한 개발 이야기는",
   "introMoreLinks": [
     "archive",
     "tag"
