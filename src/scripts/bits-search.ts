@@ -247,9 +247,9 @@ const setStatus = (
 const formatResultsSummary = (count: number, year: number | null) => {
   const summary =
     count > MAX_VISIBLE_RESULTS
-      ? `找到 ${count} 条结果，当前显示前 ${MAX_VISIBLE_RESULTS} 条`
-      : `找到 ${count} 条结果`;
-  return year ? `${year} 年 · ${summary}` : summary;
+      ? `${count}건 중 상위 ${MAX_VISIBLE_RESULTS}건 표시`
+      : `${count}건 검색됨`;
+  return year ? `${year}년 · ${summary}` : summary;
 };
 
 const isResultsVisible = () => resultsRoot?.hasAttribute('hidden') === false;
@@ -327,10 +327,10 @@ const setActiveYearState = (year: number | null) => {
     const isMoreActive = isOverflowYear(year);
     yearMoreRoot.dataset.active = String(isMoreActive);
     yearMoreTrigger.classList.toggle('is-active', isMoreActive);
-    yearMoreTrigger.setAttribute('aria-label', isMoreActive ? `打开更多年份筛选，当前 ${year} 年` : '打开更多年份筛选');
+    yearMoreTrigger.setAttribute('aria-label', isMoreActive ? `더 많은 연도 필터 열기, 현재 ${year}년` : '더 많은 연도 필터 열기');
   }
   if (yearMoreLabel) {
-    yearMoreLabel.textContent = isOverflowYear(year) ? String(year) : '更多';
+    yearMoreLabel.textContent = isOverflowYear(year) ? String(year) : '더보기';
   }
   if (yearSelect) {
     yearSelect.value = year === null ? '' : String(year);
@@ -394,15 +394,15 @@ const showBrowse = () => {
     resultsListEl.innerHTML = '';
   }
   if (resultsSummaryEl) {
-    resultsSummaryEl.textContent = '搜索结果';
+    resultsSummaryEl.textContent = '검색 결과';
   }
 };
 
 const getEmptyResultsText = (query: string, year: number | null) => {
   if (year !== null && query) {
-    return '这个年份下没有匹配内容，试试换个关键词或年份。';
+    return '해당 연도에 일치하는 항목이 없습니다. 다른 키워드나 연도를 시도해보세요.';
   }
-  return '未找到相关内容，换个关键词试试。';
+  return '일치하는 항목을 찾을 수 없습니다. 다른 키워드를 시도해보세요.';
 };
 
 const renderResults = (matchedItems: IndexItem[]) => {
@@ -422,7 +422,7 @@ const renderResults = (matchedItems: IndexItem[]) => {
       const queryTerms = getQueryTerms(query);
       const snippet = getDisplaySnippet(item, queryTerms);
       const dateLabel = item.dateLabel?.trim() ?? '';
-      const pageHint = item.page && item.page !== currentBitsPage ? `来自第 ${item.page} 页` : '';
+      const pageHint = item.page && item.page !== currentBitsPage ? `${item.page} 페이지` : '';
       const { placeText, normalTags } = getDisplayTags(item.tags ?? []);
       const place = placeText
         ? `<span class="bit-search-result__tag bit-search-result__tag--place">📍 ${highlightText(placeText, queryTerms)}</span>`
@@ -445,7 +445,7 @@ const renderResults = (matchedItems: IndexItem[]) => {
           <div class="bit-search-result__thumb">
             <img
               src="${escapeHtml(item.thumbnail.src)}"
-              alt="${escapeHtml(item.thumbnail.alt || snippet || '絮语配图')}"
+              alt="${escapeHtml(item.thumbnail.alt || snippet || '조각글 이미지')}"
               width="${item.thumbnail.width}"
               height="${item.thumbnail.height}"
               loading="lazy"
@@ -522,7 +522,7 @@ const resetFilters = (options: { focusInput?: boolean } = {}) => {
 
 const setDegradedMode = () => {
   if (input) {
-    input.placeholder = '索引加载失败';
+    input.placeholder = '색인 로딩 실패';
     input.disabled = true;
     input.setAttribute('aria-disabled', 'true');
   }
@@ -546,7 +546,7 @@ const setDegradedMode = () => {
   }
   yearSelectWrap?.setAttribute('data-disabled', 'true');
   closeMoreMenu();
-  setStatus('索引加载失败，已禁用搜索');
+  setStatus('색인 로딩 실패, 검색이 비활성화되었습니다');
   showBrowse();
 };
 
@@ -554,7 +554,7 @@ const loadIndex = async () => {
   if (indexCache) return indexCache;
   if (indexFailed) return null;
   if (!indexPromise) {
-    setStatus('正在加载索引...', { visible: false });
+    setStatus('색인 로딩 중...', { visible: false });
     indexPromise = fetch(indexUrl, {
       cache: shouldBypassIndexCache ? 'no-store' : 'default'
     })
@@ -617,7 +617,7 @@ const applyFilter = async (preloadedIndex: IndexItem[] | null = null) => {
     showBrowse();
     if (resultsRoot && resultsListEl) {
       if (resultsSummaryEl) {
-        resultsSummaryEl.textContent = '无匹配结果';
+        resultsSummaryEl.textContent = '검색 결과 없음';
       }
       resultsListEl.innerHTML = `<p class="bits-search-results__empty">${escapeHtml(getEmptyResultsText(rawQuery, activeYear))}</p>`;
       browseRoot?.setAttribute('hidden', 'true');
