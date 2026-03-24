@@ -1,21 +1,20 @@
 {
-  "title": "Astro Themes by Whono",
+  "title": "JongMin Blog",
   "description": "Astro 테마 전시 사이트: 가볍고, 유지보수 용이하며, 재사용 가능합니다.",
   "defaultLocale": "ko-KR",
   "footer": {
     "startYear": 2025,
     "showCurrentYear": true,
-    "copyright": "Whono · Theme Demo · by cxro"
+    "copyright": "JongMin Blog · Theme by cxro"
   },
   "socialLinks": {
-    "github": "https://github.com/cxro/astro-whono",
-    "x": "https://twitter.com/yourname",
-    "email": "Whono@linux.do",
+    "github": "https://github.com/codejomo99/astro-whono",
+    "x": null,
+    "email": "codejomo99@gmail.com",
     "presetOrder": {
       "github": 1,
-      "x": 2,
-      "email": 3
-    },
+      "email": 2
+    },ㅊ
     "custom": []
   }
 }
