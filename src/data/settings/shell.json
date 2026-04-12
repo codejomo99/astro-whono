@@ -20,7 +20,7 @@
       "id": "memo",
       "label": "메모",
       "ornament": "·",
-      "visible": true,
+      "visible": false,
       "order": 3
     },
     {
