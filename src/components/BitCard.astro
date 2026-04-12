@@ -1,6 +1,6 @@
 ---
 import { type BitsEntry, getBitAnchorId } from '../lib/bits';
-import { createWithBase, formatDateTime } from '../utils/format';
+import { createWithBase, formatISODate } from '../utils/format';
 import { getThemeSettings } from '../lib/theme-settings';
 
 const {
@@ -161,6 +161,6 @@ const hasTags = Boolean(placeText || normalTagItems.length);
         ) : null}
       </div>
     ) : null}
-    <div>{formatDateTime(bit.data.date)}</div>
+    <div>{formatISODate(bit.data.date)}</div>
   </div>
 </article>

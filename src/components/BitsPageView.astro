@@ -4,7 +4,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import BitCard from './BitCard.astro';
 import Lightbox from './Lightbox.astro';
 import '../styles/bits-page.css';
-import { MAX_PRIMARY_BITS_FILTER_YEARS, getBitsDerivedText, type BitsEntry, type BitsYearOption } from '../lib/bits';
+import { MAX_PRIMARY_BITS_FILTER_YEARS, getBitsDerivedText, type BitsEntry, type BitsYearOption, type BitsTagOption } from '../lib/bits';
 import { createWithBase } from '../utils/format';
 import { getThemeSettings } from '../lib/theme-settings';
 import { joinPageSubtitleText } from '../utils/format';
@@ -16,7 +16,8 @@ const {
   prevPath = null,
   resultCount,
   totalPages,
-  yearOptions = []
+  yearOptions = [],
+  tagOptions = []
 } = Astro.props as {
   currentPage: number;
   items: BitsEntry[];
@@ -25,6 +26,7 @@ const {
   resultCount: number;
   totalPages: number;
   yearOptions?: BitsYearOption[];
+  tagOptions?: BitsTagOption[];
 };
 
 const base = import.meta.env.BASE_URL ?? '/';
@@ -147,6 +149,18 @@ const cards = await Promise.all(
       ) : null}
 
       <div class="bits-controls__actions">
+        {tagOptions.length > 0 ? (
+          <button
+            class="bits-tag-trigger"
+            type="button"
+            data-bits-tag-trigger
+            data-bits-client-control
+            aria-haspopup="dialog"
+            aria-expanded="false"
+          >
+            #태그
+          </button>
+        ) : null}
         <div class="bits-controls__search-cluster" data-has-year-filter={yearOptions.length > 0 ? 'true' : 'false'}>
           <form class="bits-search" role="search" data-bits-search-form data-bits-client-control>
             <label class="sr-only" for="bits-search">조각글 검색</label>
@@ -218,6 +232,39 @@ const cards = await Promise.all(
     </div>
     <div class="bits-search-results__list" data-bits-search-results-list></div>
   </section>
+
+  {tagOptions.length > 0 ? (
+    <dialog class="entry-tags-dialog" data-bits-tag-dialog aria-labelledby="bits-tag-dialog-title">
+      <div class="entry-tags-dialog__inner">
+        <div class="entry-tags-dialog__handle" aria-hidden="true"></div>
+        <div class="entry-tags-dialog__head">
+          <div class="entry-tags-dialog__title-wrap">
+            <div class="entry-tags-dialog__title-row">
+              <h2 class="entry-tags-dialog__title" id="bits-tag-dialog-title" tabindex="-1">조각글 태그</h2>
+              <p class="entry-tags-dialog__hint">총 {tagOptions.length} 개</p>
+            </div>
+          </div>
+          <div class="entry-tags-dialog__actions">
+            <button class="entry-tags-dialog__close" type="button" data-bits-tag-close aria-label="태그 선택기 닫기">✕</button>
+          </div>
+        </div>
+        <div class="entry-tags-dialog__list">
+          {tagOptions.map((option) => (
+            <button
+              class="entry-tag-option"
+              type="button"
+              data-bits-tag-item
+              data-bits-tag={option.value}
+              aria-pressed="false"
+            >
+              <span class="entry-tag-option__label">#{option.value}</span>
+              <span class="entry-tag-option__count">{option.count}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+    </dialog>
+  ) : null}
 
   <noscript>
     <style>

@@ -1,11 +1,16 @@
 import type { CollectionEntry } from 'astro:content';
 import { getPublished, getPageSlice, getTotalPages } from './content';
-import { createWithBase, formatDateTime } from '../utils/format';
+import { createWithBase, formatISODate } from '../utils/format';
 import { deriveMarkdownText, truncateText } from '../utils/excerpt';
 
 export type BitsEntry = CollectionEntry<'bits'>;
 export type BitsYearOption = {
   value: number;
+  count: number;
+};
+
+export type BitsTagOption = {
+  value: string;
   count: number;
 };
 
@@ -62,6 +67,19 @@ export const getBitAnchorId = (key: string) => `bit-${key}`;
 
 export const getBitsPagePath = (page: number) => (page <= 1 ? '/bits/' : `/bits/page/${page}/`);
 
+const buildBitsTagOptions = (bits: readonly BitsEntry[]): BitsTagOption[] => {
+  const tagCountMap = new Map<string, number>();
+  for (const bit of bits) {
+    for (const tag of bit.data.tags ?? []) {
+      if (tag.toLowerCase().startsWith('loc:')) continue;
+      tagCountMap.set(tag, (tagCountMap.get(tag) ?? 0) + 1);
+    }
+  }
+  return Array.from(tagCountMap.entries())
+    .sort((a, b) => b[1] - a[1])
+    .map(([value, count]) => ({ value, count }));
+};
+
 const buildBitsYearOptions = (bits: readonly BitsEntry[]): BitsYearOption[] => {
   const yearCountMap = new Map<number, number>();
 
@@ -95,6 +113,7 @@ export async function getBitsPageData(currentPage: number, pageSize: number) {
   return {
     items: getPageSlice(bits, currentPage, pageSize),
     yearOptions: buildBitsYearOptions(bits),
+    tagOptions: buildBitsTagOptions(bits),
     totalCount,
     totalPages
   };
@@ -144,7 +163,7 @@ const buildBitsIndex = async (pageSize: number) => {
       text: derivedText.text,
       excerpt: derivedText.excerpt,
       date: bit.data.date ? bit.data.date.toISOString() : null,
-      dateLabel: bit.data.date ? formatDateTime(bit.data.date) : null,
+      dateLabel: bit.data.date ? formatISODate(bit.data.date) : null,
       year: bit.data.date ? bit.data.date.getFullYear() : null,
       page,
       href: `${withBase(getBitsPagePath(page))}#${getBitAnchorId(bit.id)}`,

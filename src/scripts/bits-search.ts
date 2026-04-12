@@ -10,6 +10,10 @@ const resultsRoot = document.querySelector<HTMLElement>('[data-bits-search-resul
 const resultsSummaryEl = document.querySelector<HTMLElement>('[data-bits-search-results-summary]');
 const resultsListEl = document.querySelector<HTMLElement>('[data-bits-search-results-list]');
 const clearBtn = document.querySelector<HTMLButtonElement>('[data-bits-search-clear]');
+const tagDialog = document.querySelector<HTMLDialogElement>('[data-bits-tag-dialog]');
+const tagTrigger = document.querySelector<HTMLButtonElement>('[data-bits-tag-trigger]');
+const tagCloseBtn = document.querySelector<HTMLButtonElement>('[data-bits-tag-close]');
+const tagButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-bits-tag-item]'));
 const yearFilterRoot = document.querySelector<HTMLElement>('[data-bits-year-filter]');
 const yearCursor = document.querySelector<HTMLElement>('[data-bits-year-cursor]');
 const yearButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-bits-year-item]'));
@@ -29,6 +33,7 @@ const FILTER_DEBOUNCE_MS = 120;
 const MAX_VISIBLE_RESULTS = 50;
 const QUERY_PARAM_QUERY = 'q';
 const QUERY_PARAM_YEAR = 'year';
+const QUERY_PARAM_TAG = 'tag';
 
 type IndexItem = {
   key?: string;
@@ -89,6 +94,7 @@ let indexFailed = false;
 let filterTimer: number | null = null;
 let filterRunId = 0;
 let activeYear: number | null = null;
+let activeTag: string | null = null;
 let isMoreMenuOpen = false;
 let statusTimer: number | null = null;
 
@@ -343,7 +349,34 @@ const setActiveYearState = (year: number | null) => {
   window.requestAnimationFrame(updateYearCursor);
 };
 
-const getFilterUrl = (query: string, year: number | null) => {
+const openTagDialog = () => {
+  if (tagDialog && typeof tagDialog.showModal === 'function') {
+    tagDialog.showModal();
+    tagTrigger?.setAttribute('aria-expanded', 'true');
+  }
+};
+
+const closeTagDialog = () => {
+  if (tagDialog && typeof tagDialog.close === 'function') {
+    tagDialog.close();
+  }
+  tagTrigger?.setAttribute('aria-expanded', 'false');
+};
+
+const setActiveTagState = (tag: string | null) => {
+  activeTag = tag;
+  tagButtons.forEach((button) => {
+    const isActive = button.dataset.bitsTag === tag;
+    button.classList.toggle('is-active', isActive);
+    button.setAttribute('aria-pressed', String(isActive));
+  });
+  if (tagTrigger) {
+    tagTrigger.textContent = tag ? `#${tag} ×` : '#태그';
+    tagTrigger.classList.toggle('is-active', tag !== null);
+  }
+};
+
+const getFilterUrl = (query: string, year: number | null, tag: string | null = activeTag) => {
   const nextUrl = new URL(window.location.href);
   nextUrl.hash = '';
   if (query) {
@@ -356,12 +389,17 @@ const getFilterUrl = (query: string, year: number | null) => {
   } else {
     nextUrl.searchParams.delete(QUERY_PARAM_YEAR);
   }
+  if (tag !== null) {
+    nextUrl.searchParams.set(QUERY_PARAM_TAG, tag);
+  } else {
+    nextUrl.searchParams.delete(QUERY_PARAM_TAG);
+  }
   const search = nextUrl.searchParams.toString();
   return `${nextUrl.pathname}${search ? `?${search}` : ''}`;
 };
 
-const syncUrlState = (query = getTrimmedQuery(), year = activeYear) => {
-  const next = getFilterUrl(query, year);
+const syncUrlState = (query = getTrimmedQuery(), year = activeYear, tag = activeTag) => {
+  const next = getFilterUrl(query, year, tag);
   const current = `${window.location.pathname}${window.location.search}`;
   if (next !== current) {
     window.history.replaceState({}, '', next);
@@ -372,19 +410,16 @@ const readInitialState = () => {
   const url = new URL(window.location.href);
   const query = (url.searchParams.get(QUERY_PARAM_QUERY) ?? '').trim();
   const rawYear = (url.searchParams.get(QUERY_PARAM_YEAR) ?? '').trim();
-  if (!rawYear) {
-    return { query, year: null as number | null };
-  }
+  const rawTag = (url.searchParams.get(QUERY_PARAM_TAG) ?? '').trim();
 
-  const parsedYear = Number(rawYear);
-  if (!Number.isFinite(parsedYear) || !availableYears.has(parsedYear)) {
-    return { query, year: null as number | null };
-  }
+  const parsedYear = rawYear ? Number(rawYear) : null;
+  const year = parsedYear !== null && Number.isFinite(parsedYear) && availableYears.has(parsedYear)
+    ? parsedYear
+    : null;
 
-  return {
-    query,
-    year: parsedYear
-  };
+  const tag = rawTag || null;
+
+  return { query, year, tag };
 };
 
 const showBrowse = () => {
@@ -482,11 +517,12 @@ const renderResults = (matchedItems: IndexItem[]) => {
   resultsRoot.removeAttribute('hidden');
 };
 
-const filterIndexItems = (index: IndexItem[], queryTerms: string[], year: number | null) =>
+const filterIndexItems = (index: IndexItem[], queryTerms: string[], year: number | null, tag: string | null = activeTag) =>
   index.filter((item) => {
     const key = getIndexKey(item);
     if (!key) return false;
     if (year !== null && item.year !== year) return false;
+    if (tag !== null && !item.tags.some((t) => t === tag)) return false;
     const hay = indexHay?.get(key) || '';
     return queryTerms.every((term) => hay.includes(term.toLowerCase()));
   });
@@ -512,9 +548,10 @@ const resetFilters = (options: { focusInput?: boolean } = {}) => {
     input.value = '';
   }
   setActiveYearState(null);
+  setActiveTagState(null);
   showBrowse();
   setStatus('');
-  syncUrlState('', null);
+  syncUrlState('', null, null);
   if (options.focusInput) {
     input?.focus();
   }
@@ -594,10 +631,10 @@ const applyFilter = async (preloadedIndex: IndexItem[] | null = null) => {
   const queryTerms = getQueryTerms(rawQuery);
   const normalizedQuery = rawQuery.toLowerCase();
 
-  if (rawQuery === '' && activeYear === null) {
+  if (rawQuery === '' && activeYear === null && activeTag === null) {
     showBrowse();
     setStatus('');
-    syncUrlState('', null);
+    syncUrlState('', null, null);
     return;
   }
 
@@ -612,7 +649,7 @@ const applyFilter = async (preloadedIndex: IndexItem[] | null = null) => {
 
   syncUrlState(rawQuery, activeYear);
 
-  const matchedItems = filterIndexItems(index, queryTerms, activeYear);
+  const matchedItems = filterIndexItems(index, queryTerms, activeYear, activeTag);
   if (matchedItems.length === 0) {
     showBrowse();
     if (resultsRoot && resultsListEl) {
@@ -815,13 +852,49 @@ window.addEventListener('resize', () => {
 
 yearFilterRoot?.setAttribute('data-ready', 'true');
 
+tagTrigger?.addEventListener('click', () => {
+  openTagDialog();
+});
+
+tagCloseBtn?.addEventListener('click', () => {
+  closeTagDialog();
+  tagTrigger?.focus();
+});
+
+tagDialog?.addEventListener('close', () => {
+  tagTrigger?.setAttribute('aria-expanded', 'false');
+});
+
+tagDialog?.addEventListener('click', (event) => {
+  if (event.target === tagDialog) {
+    closeTagDialog();
+  }
+});
+
+tagButtons.forEach((button) => {
+  button.addEventListener('click', async () => {
+    if (indexFailed) return;
+    const tag = button.dataset.bitsTag ?? null;
+    if (!tag) return;
+    closeTagDialog();
+    tagTrigger?.focus();
+    if (activeTag === tag) {
+      setActiveTagState(null);
+    } else {
+      setActiveTagState(tag);
+    }
+    await applyFilter();
+  });
+});
+
 const initialState = readInitialState();
 if (input && initialState.query) {
   input.value = initialState.query;
 }
 setActiveYearState(initialState.year);
-syncUrlState(initialState.query, initialState.year);
+setActiveTagState(initialState.tag);
+syncUrlState(initialState.query, initialState.year, initialState.tag);
 
-if (initialState.query || initialState.year !== null) {
+if (initialState.query || initialState.year !== null || initialState.tag !== null) {
   void applyFilter();
 }
