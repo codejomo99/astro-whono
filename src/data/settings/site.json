@@ -1,6 +1,6 @@
 {
   "title": "JongMin Blog",
-  "description": "Astro 테마 전시 사이트: 가볍고, 유지보수 용이하며, 재사용 가능합니다.",
+  "description": "AI와 대화하며 만든 기록들, 그리고 개발 이야기들을 쌓아가는 공간입니다.",
   "defaultLocale": "ko-KR",
   "footer": {
     "startYear": 2025,
