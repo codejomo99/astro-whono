@@ -72,9 +72,9 @@ const contactItems: ContactItem[] = [
     }
   </div>
   <p class="about-intro-line">
-    Whono는 Astro 기반의 미니멀 2단 글쓰기 테마입니다: 깔끔하고, 빠르며, 읽기에 최적화되어 있습니다.<br />
-    콘텐츠는 Markdown으로 작성하며, 다크 모드, 코드 하이라이트, RSS, 몰입 읽기 모드를 지원합니다. 개인 글쓰기와 가벼운 콘텐츠 발행의 출발점으로 적합합니다.<br />
-    테마는 오픈소스로 유지되고 있으며, 개선 제안이 있거나 함께 발전시키고 싶다면 <a href="https://github.com/cxro/astro-whono/issues">Issue</a>를 생성하여 소통해 주세요.
+    백엔드 개발자로 일하면서 배우고 부딪힌 것들을 기록하는 공간입니다.<br />
+    삽질도 기록하면 자산이 된다는 생각으로, 어제보다 조금 더 이해한 것들을 씁니다.<br />
+    모르면 부딪히고, 배우면 씁니다.
   </p>
   <h2 class="section-title about-section-title">섹션 안내</h2>
   <div class="site-guide">
@@ -147,30 +147,10 @@ const contactItems: ContactItem[] = [
     
   </div>
 
-  <h2 class="section-title about-section-title">자주 묻는 질문</h2>
-  <section class="qa-list" aria-label="자주 묻는 질문">
-    <details class="qa-item">
-      <summary class="qa-question"><span class="qa-icon" aria-hidden="true">Q</span>배포 후 SITE_URL is not set 경고가 나타나는 이유는?</summary>
-      <p class="qa-answer">프로덕션 도메인이 설정되지 않았기 때문입니다. 미설정 시 플레이스홀더 도메인을 사용하여 <code>canonical</code>/<code>og:url</code>/<code>sitemap</code>/<code>robots</code>가 불완전해집니다. 배포 플랫폼의 환경 변수에 <code>SITE_URL=https://your-domain</code>을 추가한 후 다시 빌드하면 해결됩니다.</p>
-    </details>
-    <details class="qa-item">
-      <summary class="qa-question"><span class="qa-icon" aria-hidden="true">Q</span>일부 글이 아카이브에 나타나지 않는 이유는?</summary>
-      <p class="qa-answer">아카이브는 <code>archive: false</code>인 글을 필터링합니다. 해당 글은 여전히 "게시되어 접근 가능"하지만, 아카이브 목록과 아카이브 RSS에 표시되지 않습니다 (목록에 포함시키고 싶지 않은 일부 콘텐츠용).</p>
-    </details>
-    <details class="qa-item">
-      <summary class="qa-question"><span class="qa-icon" aria-hidden="true">Q</span>/essay/에서 글을 클릭하면 /archive/.../로 이동하는 이유는?</summary>
-      <p class="qa-answer">프로젝트는 글 상세 페이지를 <code>/archive/{'{'}slug{'}'}/</code>로 통합하며, <code>/essay/</code>는 주로 글 목록 진입점 역할을 합니다. 이렇게 하면 중복 상세 경로를 피하고 장기적인 유지보수가 용이해집니다.</p>
-    </details>
-    <details class="qa-item">
-      <summary class="qa-question"><span class="qa-icon" aria-hidden="true">Q</span>문제 제보나 개선 참여 방법은?</summary>
-      <p class="qa-answer">저장소에서 직접 <a href="https://github.com/cxro/astro-whono/issues">Issue</a>를 생성하거나, <a href="https://github.com/cxro/astro-whono/pulls">Pull Request</a>를 제출해 주세요.</p>
-    </details>
-  </section>
-
   {
     contactItems.length ? (
       <>
-        <h2 class="section-title about-section-title">연락처 및 구독</h2>
+        <h2 class="section-title about-section-title">연락처</h2>
         <section class="contact-block" aria-label="연락처">
           <p class="contact-note">질문, 제안이 있거나 업데이트를 구독하고 싶다면 아래 방법으로 연락해 주세요.</p>
           <ul class="contact-list">
